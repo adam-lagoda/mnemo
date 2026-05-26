@@ -24,6 +24,9 @@ interface ScreenshotDao {
     @Query("SELECT * FROM screenshots WHERE extractedJson IS NULL ORDER BY timestamp DESC")
     suspend fun getUnextracted(): List<ScreenshotEntity>
 
+    @Query("SELECT COUNT(*) FROM screenshots WHERE extractedJson IS NULL")
+    fun observeUnextractedCount(): Flow<Int>
+
     @Query("SELECT * FROM screenshots WHERE reviewed = 0 AND timestamp >= :since ORDER BY timestamp DESC")
     suspend fun getUnreviewedSince(since: Long): List<ScreenshotEntity>
 

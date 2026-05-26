@@ -24,6 +24,9 @@ interface GraphEdgeDao {
     @Query("DELETE FROM graph_edges")
     suspend fun deleteAll()
 
+    @Query("DELETE FROM graph_edges WHERE sourceId = :nodeId OR targetId = :nodeId")
+    suspend fun deleteEdgesForNode(nodeId: String)
+
     @Query("SELECT COUNT(*) FROM graph_edges")
     suspend fun count(): Int
 }

@@ -11,5 +11,6 @@ class GraphRepository(private val dao: GraphEdgeDao) {
         dao.getEdgesForNode(nodeId)
     suspend fun insertAll(edges: List<GraphEdgeEntity>) = dao.insertAll(edges)
     suspend fun deleteAll() = dao.deleteAll()
+    suspend fun deleteEdgesForNode(nodeId: String) = dao.deleteEdgesForNode(nodeId)
     suspend fun count(): Int = dao.count()
 }

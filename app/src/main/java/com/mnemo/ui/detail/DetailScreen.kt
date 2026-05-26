@@ -1,7 +1,6 @@
 package com.mnemo.ui.detail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -10,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +30,7 @@ fun DetailScreen(
 ) {
     LaunchedEffect(screenshotId) { vm.load(screenshotId) }
     val state by vm.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().background(Background).verticalScroll(rememberScrollState())
@@ -47,6 +48,9 @@ fun DetailScreen(
                 IconButton(onClick = vm::markReviewed) {
                     Icon(Icons.Default.CheckCircle, contentDescription = "Mark reviewed", tint = Accent)
                 }
+            }
+            IconButton(onClick = { showDeleteDialog = true }) {
+                Icon(Icons.Outlined.Delete, contentDescription = "Remove", tint = Error)
             }
         }
 
@@ -72,33 +76,23 @@ fun DetailScreen(
         // Extracted data
         if (extraction != null) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Source type + sentiment
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip(extraction.source_type.uppercase())
                     Chip(extraction.sentiment)
                     if (extraction.urgency > 0.5f) Chip("URGENT")
                 }
-                // Title
                 if (extraction.title.isNotBlank()) {
                     Text(extraction.title, style = MaterialTheme.typography.titleMedium)
                 }
-                // Summary
                 if (extraction.summary.isNotBlank()) {
                     Text(extraction.summary, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
                 }
-                // Topics
                 if (extraction.topics.isNotEmpty()) {
-                    Section("Topics") {
-                        FlowRow(extraction.topics)
-                    }
+                    Section("Topics") { FlowRow(extraction.topics) }
                 }
-                // Entities
                 if (extraction.entities.isNotEmpty()) {
-                    Section("Entities") {
-                        FlowRow(extraction.entities)
-                    }
+                    Section("Entities") { FlowRow(extraction.entities) }
                 }
-                // Action items
                 if (extraction.action_items.isNotEmpty()) {
                     Section("Action Items") {
                         extraction.action_items.forEach { item ->
@@ -133,14 +127,28 @@ fun DetailScreen(
             Spacer(Modifier.height(16.dp))
         }
     }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Remove screenshot") },
+            text = { Text("Remove this screenshot from Mnemo? The file stays on your device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    vm.delete(onBack)
+                }) { Text("Remove", color = Error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
 private fun Chip(label: String) {
-    Surface(
-        color = SurfaceVariant,
-        shape = MaterialTheme.shapes.small
-    ) {
+    Surface(color = SurfaceVariant, shape = MaterialTheme.shapes.small) {
         Text(
             label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -160,7 +168,6 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun FlowRow(items: List<String>) {
-    // Simple wrapping row using fixed-size chips
     Column {
         items.chunked(4).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

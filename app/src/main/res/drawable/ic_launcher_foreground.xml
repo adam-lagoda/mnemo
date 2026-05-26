@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple "M" for Mnemo in cyan -->
+    <path
+        android:fillColor="#00C8C8"
+        android:pathData="M24,80 L24,28 L54,60 L84,28 L84,80 L76,80 L76,46 L54,70 L32,46 L32,80 Z"/>
+</vector>

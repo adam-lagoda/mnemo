@@ -23,6 +23,7 @@ class ExtractionWorker(
         var failed = 0
         unextracted.forEach { entity ->
             try {
+                setProgress(workDataOf("current_uri" to entity.uri))
                 val bitmap = BitmapUtils.loadAndResize(
                     applicationContext.contentResolver,
                     Uri.parse(entity.uri)

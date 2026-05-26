@@ -81,10 +81,9 @@ private fun SearchResultRow(screenshot: ScreenshotEntity, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall,
                 color = Accent
             )
-            val summary = screenshot.extractedJson?.let { json ->
+            val summary = screenshot.extractedJson?.let { jsonStr ->
                 try {
-                    kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                        .decodeFromString<com.mnemo.data.model.ExtractionResult>(json).title
+                    kotlinx.serialization.json.Json.decodeFromString<com.mnemo.data.model.ExtractionResult>(jsonStr).title
                 } catch (e: Exception) { null }
             } ?: "Unindexed"
             Text(text = summary, style = MaterialTheme.typography.bodyMedium, maxLines = 2)

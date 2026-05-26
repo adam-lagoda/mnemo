@@ -9,12 +9,21 @@ import androidx.navigation.navArgument
 import com.mnemo.ui.detail.DetailScreen
 import com.mnemo.ui.gallery.GalleryScreen
 import com.mnemo.ui.graph.GraphScreen
+import com.mnemo.ui.indexing.IndexingScreen
+import com.mnemo.ui.model.ModelScreen
+import com.mnemo.ui.profile.ProfileScreen
 import com.mnemo.ui.search.SearchScreen
+import com.mnemo.ui.setup.SetupScreen
 
 object Routes {
     const val GALLERY = "gallery"
     const val SEARCH = "search"
     const val GRAPH = "graph"
+    const val MODEL = "model"
+    const val PROFILE = "profile"
+    // Sub-screens pushed from Profile
+    const val SETUP = "setup"
+    const val INDEXING = "indexing"
     const val DETAIL = "detail/{screenshotId}"
     fun detail(id: String) = "detail/$id"
 }
@@ -23,9 +32,9 @@ object Routes {
 fun MnemoNavGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = Routes.GALLERY) {
         composable(Routes.GALLERY) {
-            GalleryScreen(onScreenshotClick = { id ->
-                navController.navigate(Routes.detail(id))
-            })
+            GalleryScreen(
+                onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) }
+            )
         }
         composable(Routes.SEARCH) {
             SearchScreen(onResultClick = { id ->
@@ -36,6 +45,21 @@ fun MnemoNavGraph(navController: NavHostController) {
             GraphScreen(onNodeTap = { id ->
                 navController.navigate(Routes.detail(id))
             })
+        }
+        composable(Routes.MODEL) {
+            ModelScreen()
+        }
+        composable(Routes.PROFILE) {
+            ProfileScreen(
+                onSetupClick = { navController.navigate(Routes.SETUP) },
+                onIndexingClick = { navController.navigate(Routes.INDEXING) }
+            )
+        }
+        composable(Routes.SETUP) {
+            SetupScreen()
+        }
+        composable(Routes.INDEXING) {
+            IndexingScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.DETAIL,

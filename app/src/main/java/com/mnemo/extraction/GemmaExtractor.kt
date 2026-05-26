@@ -2,61 +2,60 @@ package com.mnemo.extraction
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.google.mediapipe.tasks.genai.llminference.LlmInference
-import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
-import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
+import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Engine
+import com.google.ai.edge.litertlm.EngineConfig
 import com.mnemo.data.model.ExtractionResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.File
 
-/**
- * VLM extractor using Gemma 3n E2B via MediaPipe LLM Inference API.
- *
- * Model setup: Copy gemma-3n-E2B-it-int4.bin to the device:
- *   adb push gemma-3n-E2B-it-int4.bin /data/local/tmp/
- * Then grant the app access by placing it at context.filesDir:
- *   adb shell cp /data/local/tmp/gemma-3n-E2B-it-int4.bin \
- *     /data/data/com.mnemo/files/gemma-3n-E2B-it-int4.bin
- *
- * Model download: https://www.kaggle.com/models/google/gemma-3n/tfLite
- */
 class GemmaExtractor(private val context: Context) : VlmExtractor {
 
     private val modelPath: String
-        get() = "${context.filesDir.absolutePath}/gemma-3n-E2B-it-int4.bin"
+        get() = "${context.filesDir.absolutePath}/gemma-3n-E2B-it-int4.litertlm"
 
-    private var llmInference: LlmInference? = null
+    private var engine: Engine? = null
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    private fun getOrCreateInference(): LlmInference {
-        return llmInference ?: run {
-            val options = LlmInference.LlmInferenceOptions.builder()
-                .setModelPath(modelPath)
-                .setMaxTokens(1024)
-                .setTopK(40)
-                .setTemperature(0.1f)
-                .build()
-            LlmInference.createFromOptions(context, options).also { llmInference = it }
+    private fun getOrCreateEngine(): Engine {
+        return engine ?: run {
+            val config = EngineConfig(
+                modelPath = modelPath,
+                backend = Backend.CPU(),
+                visionBackend = Backend.GPU(),
+                cacheDir = context.cacheDir.path
+            )
+            Engine(config).also { e ->
+                e.initialize()
+                engine = e
+            }
         }
     }
 
     override suspend fun extract(bitmap: Bitmap, screenshotUri: String): ExtractionResult? =
         withContext(Dispatchers.IO) {
+            val tmpFile = File.createTempFile("screenshot", ".jpg", context.cacheDir)
             try {
-                val inference = getOrCreateInference()
-                val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                    .build()
-                val session = LlmInferenceSession.createFromOptions(inference, sessionOptions)
-                session.addQueryChunk(ExtractionPrompts.buildExtractionPrompt())
-                val mpImage = BitmapImageBuilder(bitmap).build()
-                session.addImage(mpImage)
-                val response = session.generateResponse()
-                session.close()
-                parseResponse(response)
+                tmpFile.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                val e = getOrCreateEngine()
+                e.createConversation().use { conversation ->
+                    val response = conversation.sendMessage(
+                        Contents.of(
+                            Content.ImageFile(tmpFile.absolutePath),
+                            Content.Text(ExtractionPrompts.buildExtractionPrompt())
+                        )
+                    ).toString()
+                    parseResponse(response)
+                }
             } catch (e: Exception) {
                 null
+            } finally {
+                tmpFile.delete()
             }
         }
 
@@ -71,8 +70,16 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
         }
     }
 
+    suspend fun generate(prompt: String): String =
+        withContext(Dispatchers.IO) {
+            val e = getOrCreateEngine()
+            e.createConversation().use { conversation ->
+                conversation.sendMessage(Contents.of(Content.Text(prompt))).toString()
+            }
+        }
+
     override fun close() {
-        llmInference?.close()
-        llmInference = null
+        engine?.close()
+        engine = null
     }
 }

@@ -22,10 +22,10 @@ data class NodeState(
     val id: String,
     val communityId: Int,
     val degree: Int,
-    var x: Float = 0f,
-    var y: Float = 0f,
-    var vx: Float = 0f,
-    var vy: Float = 0f
+    val x: Float = 0f,
+    val y: Float = 0f,
+    val vx: Float = 0f,
+    val vy: Float = 0f
 )
 
 @Composable
@@ -34,8 +34,9 @@ fun ForceDirectedCanvas(
     edges: List<GraphEdge>,
     onNodeTap: (String) -> Unit
 ) {
+    // SnapshotStateList: item replacement triggers Canvas reread
     val nodeStates = remember(nodes) {
-        nodes.mapIndexed { i, n ->
+        mutableStateListOf(*nodes.mapIndexed { i, n ->
             NodeState(
                 id = n.id,
                 communityId = n.communityId,
@@ -43,7 +44,7 @@ fun ForceDirectedCanvas(
                 x = (i * 137.508f % 600f) - 300f,
                 y = (i * 97.3f % 600f) - 300f
             )
-        }.toMutableList()
+        }.toTypedArray())
     }
 
     var scale by remember { mutableFloatStateOf(1f) }
@@ -69,11 +70,8 @@ fun ForceDirectedCanvas(
 
                     // Attraction (Hooke) along edges
                     for (edge in edges) {
-                        val otherId = when {
-                            edge.source == a.id -> edge.target
-                            edge.target == a.id -> edge.source
-                            else -> continue
-                        }
+                        if (edge.source != a.id && edge.target != a.id) continue
+                        val otherId = if (edge.source == a.id) edge.target else edge.source
                         val b = nodeStates.find { it.id == otherId } ?: continue
                         val dx = b.x - a.x; val dy = b.y - a.y
                         val dist = sqrt(dx * dx + dy * dy) + 0.01f
@@ -84,9 +82,10 @@ fun ForceDirectedCanvas(
                     // Center gravity
                     fx -= a.x * 0.002f; fy -= a.y * 0.002f
 
-                    a.vx = (a.vx + fx) * 0.85f
-                    a.vy = (a.vy + fy) * 0.85f
-                    a.x += a.vx; a.y += a.vy
+                    val newVx = (a.vx + fx) * 0.85f
+                    val newVy = (a.vy + fy) * 0.85f
+                    // Replace in SnapshotStateList to trigger recomposition
+                    nodeStates[i] = a.copy(vx = newVx, vy = newVy, x = a.x + newVx, y = a.y + newVy)
                 }
             }
         }
@@ -119,7 +118,6 @@ fun ForceDirectedCanvas(
             translate(offset.x + cx, offset.y + cy)
             scale(scale, scale, Offset.Zero)
         }) {
-            // Edges
             for (edge in edges) {
                 val src = nodeStates.find { it.id == edge.source } ?: continue
                 val tgt = nodeStates.find { it.id == edge.target } ?: continue
@@ -130,7 +128,6 @@ fun ForceDirectedCanvas(
                     strokeWidth = 1f
                 )
             }
-            // Nodes
             for (node in nodeStates) {
                 val color = communityColor(node.communityId)
                 val radius = (8f + node.degree * 1.5f).coerceAtMost(24f)

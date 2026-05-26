@@ -7,6 +7,7 @@ import com.mnemo.data.repository.ScreenshotRepository
 import com.mnemo.embedding.TfIdfFallbackEngine
 import com.mnemo.extraction.GemmaExtractor
 import com.mnemo.extraction.VlmExtractor
+import com.mnemo.data.prefs.AppConfig
 import com.mnemo.graph.GraphAnalytics
 import com.mnemo.graph.GraphBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ class AppModule private constructor(context: Context) {
     val vlmExtractor: VlmExtractor = GemmaExtractor(context)
     val graphBuilder = GraphBuilder(embeddingEngine, screenshotRepository)
     val graphAnalytics = GraphAnalytics()
+    val appConfig = AppConfig(context)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

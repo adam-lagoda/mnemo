@@ -3,8 +3,12 @@ package com.mnemo.ui.detail
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.mnemo.data.db.entities.ScreenshotEntity
+import com.mnemo.data.db.entities.GraphEdgeEntity
 import com.mnemo.data.model.ExtractionResult
+import com.mnemo.data.repository.GraphRepository
+import com.mnemo.data.repository.ScreenshotRepository
 import com.mnemo.di.AppModule
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -17,15 +21,24 @@ data class DetailUiState(
     val isLoading: Boolean = true
 )
 
-class DetailViewModel(app: Application) : AndroidViewModel(app) {
-    private val appModule = AppModule.getInstance(app)
-    private val screenshotRepo = appModule.screenshotRepository
-    private val graphRepo = appModule.graphRepository
-    private val analytics = appModule.graphAnalytics
+class DetailViewModel(
+    app: Application,
+    private val screenshotRepo: ScreenshotRepository,
+    private val graphRepo: GraphRepository
+) : AndroidViewModel(app) {
+
+    constructor(app: Application) : this(
+        app,
+        AppModule.getInstance(app).screenshotRepository,
+        AppModule.getInstance(app).graphRepository
+    )
+
+    private val analytics = AppModule.getInstance(app).graphAnalytics
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private val _screenshotId = MutableStateFlow<String?>(null)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<DetailUiState> = _screenshotId
         .filterNotNull()
         .flatMapLatest { id ->
@@ -36,7 +49,7 @@ class DetailViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val edges = graphRepo.getEdgesForNode(id)
                 val relatedIds = analytics.getRelated(id, edges.map {
-                    com.mnemo.data.db.entities.GraphEdgeEntity(it.sourceId, it.targetId, it.weight, it.edgeType)
+                    GraphEdgeEntity(it.sourceId, it.targetId, it.weight, it.edgeType)
                 })
                 val related = relatedIds.mapNotNull { screenshotRepo.getById(it) }
                 emit(DetailUiState(screenshot = screenshot, extraction = extraction, related = related, isLoading = false))
@@ -49,6 +62,16 @@ class DetailViewModel(app: Application) : AndroidViewModel(app) {
     fun markReviewed() {
         viewModelScope.launch {
             _screenshotId.value?.let { screenshotRepo.markReviewed(it) }
+        }
+    }
+
+    fun delete(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            _screenshotId.value?.let { id ->
+                screenshotRepo.deleteById(id)
+                graphRepo.deleteEdgesForNode(id)
+            }
+            onDeleted()
         }
     }
 }
