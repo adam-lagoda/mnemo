@@ -38,7 +38,7 @@ object NotificationHelper {
             "Indexing progress",
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Shows progress while Mnemo indexes screenshots in the background"
+            description = "Shows progress while mnemo indexes screenshots in the background"
             enableVibration(false)
             setShowBadge(false)
         }
@@ -68,7 +68,7 @@ object NotificationHelper {
         val cancelIntent = WorkManager.getInstance(context).createCancelPendingIntent(workId)
         return NotificationCompat.Builder(context, INDEXING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Mnemo · Indexing in progress")
+            .setContentTitle("mnemo · Indexing in progress")
             .setContentText("$done / $total complete$eta")
             .setProgress(100, progress, total == 0)
             .setContentIntent(mainActivityIntent(context))
@@ -91,7 +91,7 @@ object NotificationHelper {
         // (the in-progress notification) doesn't wipe this one.
         val notification = NotificationCompat.Builder(context, INDEXING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Mnemo · Indexing complete")
+            .setContentTitle("mnemo · Indexing complete")
             .setContentText(text)
             .setContentIntent(mainActivityIntent(context))
             .setAutoCancel(true)
@@ -122,7 +122,7 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_gallery)
-            .setContentTitle("Mnemo: $total new items captured")
+            .setContentTitle("mnemo: $total new items captured")
             .setContentText(communitySummary.entries.first().let { "${it.value} in '${it.key}'" })
             .setStyle(NotificationCompat.BigTextStyle().bigText(bodyLines))
             .setContentIntent(pendingIntent)

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mnemo.data.db.entities.ScreenshotEntity
+import com.mnemo.data.prefs.AppConfig
 import com.mnemo.graph.GraphNode
 import com.mnemo.ui.theme.*
 import java.text.SimpleDateFormat
@@ -32,11 +33,62 @@ fun GraphScreen(
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
-                "Mnemo",
+                "mnemo",
                 style = MaterialTheme.typography.headlineMedium,
                 color = OnSurface,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
             )
+
+            // Date filter chips
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(bottom = 4.dp)
+            ) {
+                items(AppConfig.DAY_FILTER_OPTIONS) { days ->
+                    FilterChip(
+                        selected = state.dateFilterDays == days,
+                        onClick = { vm.setDateFilter(days) },
+                        label = { Text(AppConfig.dayFilterLabel(days), style = MaterialTheme.typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Accent,
+                            selectedLabelColor = Background,
+                        )
+                    )
+                }
+            }
+
+            // Topic filter chips — shown once graph has topic nodes
+            if (state.availableTopics.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 6.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = state.topicFilter == null,
+                            onClick = { vm.setTopicFilter(null) },
+                            label = { Text("All topics", style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Accent,
+                                selectedLabelColor = Background,
+                            )
+                        )
+                    }
+                    items(state.availableTopics) { topic ->
+                        FilterChip(
+                            selected = state.topicFilter == topic,
+                            onClick = { vm.setTopicFilter(if (state.topicFilter == topic) null else topic) },
+                            label = { Text(topic, style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Accent,
+                                selectedLabelColor = Background,
+                            )
+                        )
+                    }
+                }
+            }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
