@@ -54,6 +54,9 @@ interface ScreenshotDao {
     @Query("SELECT uri FROM screenshots")
     suspend fun getAllUris(): List<String>
 
+    @Query("SELECT COUNT(*) > 0 FROM screenshots WHERE uri = :uri")
+    suspend fun existsByUri(uri: String): Boolean
+
     @Query("SELECT * FROM screenshots WHERE embeddingBlob IS NOT NULL AND extractedJson IS NOT NULL ORDER BY timestamp DESC")
     suspend fun getEmbedded(): List<ScreenshotEntity>
 

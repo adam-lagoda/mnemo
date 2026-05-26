@@ -3,12 +3,17 @@ package com.mnemo.scheduling
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import androidx.work.*
+import com.mnemo.data.db.entities.ScreenshotEntity
 import com.mnemo.di.AppModule
 import com.mnemo.embedding.toEmbeddingBlob
 import com.mnemo.notification.NotificationHelper
 import com.mnemo.util.BitmapUtils
+import com.mnemo.util.DateUtils
+import com.mnemo.util.MediaStoreScanner
+import java.util.UUID
 
 class ExtractionWorker(
     context: Context,
@@ -20,6 +25,8 @@ class ExtractionWorker(
         val repo = app.screenshotRepository
         val extractor = app.vlmExtractor
         val onnx = app.onnxEmbeddingEngine
+
+        if (app.appConfig.autoWatchEnabled) scanAndInsertNew()
 
         val unextracted = repo.getUnextracted()
         if (unextracted.isEmpty()) return Result.success()
@@ -33,6 +40,14 @@ class ExtractionWorker(
 
             unextracted.forEachIndexed { index, entity ->
                 try {
+                    val battery = applicationContext
+                        .getSystemService(BatteryManager::class.java)
+                        .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    if (battery < 30) {
+                        android.util.Log.i("ExtractionWorker", "Battery $battery% < 30%, stopping after $index items")
+                        return Result.success()
+                    }
+
                     // ETA: based on average ms per completed item so far
                     val remainingSeconds = if (index > 0) {
                         val avgMs = (System.currentTimeMillis() - startTime) / index.toLong()
@@ -40,6 +55,7 @@ class ExtractionWorker(
                     } else -1
 
                     emitProgress(entity.uri, index, total, Step.LOADING, remainingSeconds)
+                    setForeground(buildForegroundInfo(applicationContext, index, total, remainingSeconds))
 
                     val bitmap = BitmapUtils.loadAndResize(
                         applicationContext.contentResolver,
@@ -70,7 +86,7 @@ class ExtractionWorker(
                             }
                         }
 
-                        setForeground(buildForegroundInfo(applicationContext, index + 1, total))
+                        setForeground(buildForegroundInfo(applicationContext, index + 1, total, remainingSeconds))
                     } else {
                         android.util.Log.w("ExtractionWorker", "extract() returned null for ${entity.uri}")
                         failed++
@@ -92,8 +108,36 @@ class ExtractionWorker(
         return Result.success()
     }
 
-    private fun buildForegroundInfo(context: Context, done: Int, total: Int): ForegroundInfo {
-        val notification = NotificationHelper.buildIndexingNotification(context, done, total)
+    private suspend fun scanAndInsertNew() {
+        val app = AppModule.getInstance(applicationContext)
+        val config = app.appConfig
+        val repo = app.screenshotRepository
+
+        val relativePath = config.relativePath ?: return
+        val since = if (config.dayFilter == -1) 0L else DateUtils.millisSince(config.dayFilter)
+
+        val candidates = MediaStoreScanner.query(
+            applicationContext.contentResolver,
+            relativePath,
+            since
+        )
+
+        for (candidate in candidates) {
+            val uriString = candidate.uri.toString()
+            if (!repo.existsByUri(uriString)) {
+                repo.insert(
+                    ScreenshotEntity(
+                        id = UUID.randomUUID().toString(),
+                        uri = uriString,
+                        timestamp = candidate.timestamp
+                    )
+                )
+            }
+        }
+    }
+
+    private fun buildForegroundInfo(context: Context, done: Int, total: Int, remainingSeconds: Int = -1): ForegroundInfo {
+        val notification = NotificationHelper.buildIndexingNotification(context, done, total, id, remainingSeconds)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
                 NotificationHelper.INDEXING_NOTIFICATION_ID,

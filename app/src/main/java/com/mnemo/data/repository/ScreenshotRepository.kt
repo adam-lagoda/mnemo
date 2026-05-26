@@ -24,6 +24,7 @@ class ScreenshotRepository(private val dao: ScreenshotDao) {
     suspend fun search(query: String): List<ScreenshotEntity> = dao.search(query)
     suspend fun getById(id: String): ScreenshotEntity? = dao.getById(id)
     suspend fun getAllUris(): List<String> = dao.getAllUris()
+    suspend fun existsByUri(uri: String): Boolean = dao.existsByUri(uri)
     suspend fun getEmbedded(): List<ScreenshotEntity> = dao.getEmbedded()
     suspend fun updateEmbedding(id: String, blob: ByteArray) = dao.updateEmbedding(id, blob)
 }

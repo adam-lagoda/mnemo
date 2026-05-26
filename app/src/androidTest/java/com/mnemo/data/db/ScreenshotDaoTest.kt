@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,5 +49,30 @@ class ScreenshotDaoTest {
         val count = dao.observeUnextractedCount().first()
 
         assertEquals(0, count)
+    }
+
+    @Test
+    fun existsByUri_returnsTrueWhenUriPresent() = runBlocking {
+        dao.insert(ScreenshotEntity(id = "id-1", uri = "content://media/external/images/media/1", timestamp = 0L))
+
+        val result = dao.existsByUri("content://media/external/images/media/1")
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun existsByUri_returnsFalseWhenUriAbsent() = runBlocking {
+        val result = dao.existsByUri("content://media/external/images/media/99")
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun existsByUri_matchesExactUriOnly() = runBlocking {
+        dao.insert(ScreenshotEntity(id = "id-1", uri = "content://media/external/images/media/1", timestamp = 0L))
+
+        val result = dao.existsByUri("content://media/external/images/media/10")
+
+        assertFalse(result)
     }
 }

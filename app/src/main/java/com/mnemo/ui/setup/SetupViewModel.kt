@@ -36,6 +36,7 @@ data class SetupUiState(
     val candidateCount: Int = 0,
     val indexedCount: Int = 0,
     val lastIndexedAt: Long? = null,
+    val autoWatchEnabled: Boolean = false,
 )
 
 class SetupViewModel(app: Application) : AndroidViewModel(app) {
@@ -45,13 +46,15 @@ class SetupViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _modelStates = MutableStateFlow<Map<ModelId, ModelDownloadState>>(emptyMap())
     private val _candidateCount = MutableStateFlow(0)
+    private val _autoWatchEnabled = MutableStateFlow(config.autoWatchEnabled)
     private var pollingJob: Job? = null
 
     val uiState: StateFlow<SetupUiState> = combine(
         _modelStates,
         _candidateCount,
-        screenshotRepo.observeAll()
-    ) { modelStates, candidateCount, entities ->
+        screenshotRepo.observeAll(),
+        _autoWatchEnabled
+    ) { modelStates, candidateCount, entities, autoWatch ->
         val indexed = entities.filter { it.extractedJson != null }
         SetupUiState(
             modelStates = modelStates,
@@ -60,7 +63,8 @@ class SetupViewModel(app: Application) : AndroidViewModel(app) {
             hasFolderSelected = config.treeUri != null,
             candidateCount = candidateCount,
             indexedCount = indexed.size,
-            lastIndexedAt = indexed.maxOfOrNull { it.timestamp }
+            lastIndexedAt = indexed.maxOfOrNull { it.timestamp },
+            autoWatchEnabled = autoWatch
         )
     }.stateIn(
         viewModelScope,
@@ -68,7 +72,8 @@ class SetupViewModel(app: Application) : AndroidViewModel(app) {
         SetupUiState(
             savedHfToken = config.hfToken,
             folderDisplayName = config.displayName,
-            hasFolderSelected = config.treeUri != null
+            hasFolderSelected = config.treeUri != null,
+            autoWatchEnabled = config.autoWatchEnabled
         )
     )
 
@@ -132,6 +137,11 @@ class SetupViewModel(app: Application) : AndroidViewModel(app) {
 
     fun reIndexNow() {
         ExtractionWorker.enqueue(getApplication())
+    }
+
+    fun setAutoWatchEnabled(enabled: Boolean) {
+        config.autoWatchEnabled = enabled
+        _autoWatchEnabled.value = enabled
     }
 
     fun verifyModel(modelId: ModelId) {

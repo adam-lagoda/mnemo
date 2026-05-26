@@ -1,6 +1,7 @@
 package com.mnemo
 
 import android.app.Application
+import android.os.BatteryManager
 import com.mnemo.di.AppModule
 import com.mnemo.notification.NotificationHelper
 import com.mnemo.scheduling.MorningNotificationWorker
@@ -15,7 +16,11 @@ class MnemoApp : Application() {
         NotificationHelper.createChannel(this)
         NotificationHelper.createIndexingChannel(this)
         appModule.seedEmbeddingCorpus()
-        screenshotMonitor = ScreenshotMonitor(this).also { it.register() }
+        screenshotMonitor = ScreenshotMonitor(
+            context = this,
+            appConfig = appModule.appConfig,
+            batteryManager = getSystemService(BatteryManager::class.java)
+        ).also { it.register() }
         MorningNotificationWorker.schedule(this)
     }
 

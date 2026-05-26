@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.work.WorkManager
+import java.util.UUID
 
 object NotificationHelper {
     const val CHANNEL_ID         = "mnemo_digest"
@@ -44,16 +46,42 @@ object NotificationHelper {
             .createNotificationChannel(channel)
     }
 
-    fun buildIndexingNotification(context: Context, done: Int, total: Int): Notification {
+    private fun mainActivityIntent(context: Context): PendingIntent {
+        val intent = Intent(context, Class.forName("com.mnemo.MainActivity")).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    fun buildIndexingNotification(
+        context: Context,
+        done: Int,
+        total: Int,
+        workId: UUID,
+        remainingSeconds: Int = -1,
+    ): Notification {
         val progress = if (total > 0) (done * 100 / total) else 0
+        val eta = if (remainingSeconds >= 0) " · ${formatEta(remainingSeconds)}" else ""
+        val cancelIntent = WorkManager.getInstance(context).createCancelPendingIntent(workId)
         return NotificationCompat.Builder(context, INDEXING_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Mnemo · Indexing in progress")
-            .setContentText("$done / $total complete")
+            .setContentText("$done / $total complete$eta")
             .setProgress(100, progress, total == 0)
+            .setContentIntent(mainActivityIntent(context))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
             .build()
+    }
+
+    private fun formatEta(seconds: Int): String {
+        val m = seconds / 60
+        val s = seconds % 60
+        return if (m > 0) "${m}m ${s}s left" else "${s}s left"
     }
 
     fun sendIndexingCompleteNotification(context: Context, indexed: Int, failed: Int) {
@@ -65,6 +93,7 @@ object NotificationHelper {
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("Mnemo · Indexing complete")
             .setContentText(text)
+            .setContentIntent(mainActivityIntent(context))
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(INDEXING_COMPLETE_NOTIFICATION_ID, notification)

@@ -18,6 +18,10 @@ class AppConfig(context: Context) {
         get() = prefs.getString(KEY_HF_TOKEN, null)
         set(value) = prefs.edit().putString(KEY_HF_TOKEN, value).apply()
 
+    var autoWatchEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_WATCH, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_WATCH, value).apply()
+
     /** Last path segment of the selected folder, e.g. "Screenshots" */
     val displayName: String
         get() = treeUri?.lastPathSegment
@@ -39,6 +43,7 @@ class AppConfig(context: Context) {
         private const val KEY_TREE_URI  = "tree_uri"
         private const val KEY_DAY_FILTER = "day_filter"
         private const val KEY_HF_TOKEN  = "hf_token"
+        private const val KEY_AUTO_WATCH = "auto_watch_enabled"
 
         val DAY_FILTER_OPTIONS = listOf(7, 30, 90, -1)
         fun dayFilterLabel(days: Int) = if (days == -1) "All" else "${days}d"

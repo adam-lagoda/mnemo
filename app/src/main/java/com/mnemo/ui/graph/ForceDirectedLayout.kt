@@ -12,10 +12,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import com.mnemo.graph.GraphEdge
 import com.mnemo.graph.GraphNode
 import com.mnemo.ui.theme.Accent
 import com.mnemo.ui.theme.OnSurfaceVariant
+import com.mnemo.ui.theme.TextPrimary
 import com.mnemo.ui.theme.communityColor
 import kotlinx.coroutines.isActive
 import kotlin.math.sqrt
@@ -30,6 +36,7 @@ private val EdgeColors = mapOf(
 
 data class NodeState(
     val id: String,
+    val label: String,
     val communityId: Int,
     val degree: Int,
     val isTopicNode: Boolean,
@@ -50,6 +57,7 @@ fun ForceDirectedCanvas(
         mutableStateListOf(*nodes.mapIndexed { i, n ->
             NodeState(
                 id = n.id,
+                label = n.label,
                 communityId = n.communityId,
                 degree = n.degree,
                 isTopicNode = n.isTopicNode,
@@ -64,6 +72,7 @@ fun ForceDirectedCanvas(
         nodeStates.indices.associateBy { nodeStates[it].id }
     }
 
+    val textMeasurer = rememberTextMeasurer()
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -156,7 +165,7 @@ fun ForceDirectedCanvas(
                 )
             }
 
-            // Nodes
+            // Nodes + labels
             for (node in nodeStates) {
                 val radius = nodeRadius(node)
                 val isSelected = node.id == selectedNodeId
@@ -178,6 +187,25 @@ fun ForceDirectedCanvas(
                     if (isSelected) {
                         drawCircle(color = Color.White, radius = radius, center = Offset(node.x, node.y), style = Stroke(2.5f))
                     }
+                }
+
+                // Label below node — topic nodes always, screenshot nodes only when selected
+                if (node.isTopicNode || isSelected) {
+                    val raw = node.label
+                    val display = if (raw.length > 16) raw.take(14) + "…" else raw
+                    val style = TextStyle(
+                        fontSize = if (node.isTopicNode) 7.sp else 6.sp,
+                        fontWeight = if (node.isTopicNode) FontWeight.Medium else FontWeight.Normal,
+                        color = if (node.isTopicNode) TextPrimary else TextPrimary.copy(alpha = 0.75f),
+                    )
+                    val measured = textMeasurer.measure(display, style)
+                    drawText(
+                        textLayoutResult = measured,
+                        topLeft = Offset(
+                            node.x - measured.size.width / 2f,
+                            node.y + radius + 4f
+                        )
+                    )
                 }
             }
         }
