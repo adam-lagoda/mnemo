@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mnemo</string>
+    <string name="notification_channel_name">Daily Digest</string>
+    <string name="notification_channel_desc">Morning summary of indexed screenshots</string>
+    <string name="notif_title">Mnemo found new items</string>
+    <string name="gallery">Gallery</string>
+    <string name="search">Search</string>
+    <string name="graph">Graph</string>
+</resources>
