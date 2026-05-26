@@ -13,6 +13,7 @@ class MnemoApp : Application() {
         super.onCreate()
         val appModule = AppModule.getInstance(this)
         NotificationHelper.createChannel(this)
+        NotificationHelper.createIndexingChannel(this)
         appModule.seedEmbeddingCorpus()
         screenshotMonitor = ScreenshotMonitor(this).also { it.register() }
         MorningNotificationWorker.schedule(this)

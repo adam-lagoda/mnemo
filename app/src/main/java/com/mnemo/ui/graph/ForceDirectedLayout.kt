@@ -59,11 +59,17 @@ fun ForceDirectedCanvas(
         }.toTypedArray())
     }
 
+    // O(1) node lookup by id — avoids O(N) find() in physics and draw loops
+    val idToIndex = remember(nodes.map { it.id }) {
+        nodeStates.indices.associateBy { nodeStates[it].id }
+    }
+
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
     LaunchedEffect(nodes.map { it.id }, edges) {
         while (isActive) {
+            var totalKE = 0f
             withFrameMillis {
                 for (i in nodeStates.indices) {
                     val a = nodeStates[i]
@@ -85,7 +91,8 @@ fun ForceDirectedCanvas(
                     for (edge in edges) {
                         if (edge.source != a.id && edge.target != a.id) continue
                         val otherId = if (edge.source == a.id) edge.target else edge.source
-                        val b = nodeStates.find { it.id == otherId } ?: continue
+                        val bi = idToIndex[otherId] ?: continue
+                        val b = nodeStates[bi]
                         val dx = b.x - a.x; val dy = b.y - a.y
                         val dist = sqrt(dx * dx + dy * dy) + 0.01f
                         val force = 0.008f * edge.weight * dist
@@ -98,8 +105,10 @@ fun ForceDirectedCanvas(
                     val newVx = (a.vx + fx) * 0.85f
                     val newVy = (a.vy + fy) * 0.85f
                     nodeStates[i] = a.copy(vx = newVx, vy = newVy, x = a.x + newVx, y = a.y + newVy)
+                    totalKE += newVx * newVx + newVy * newVy
                 }
             }
+            if (totalKE < 0.01f) break  // simulation converged — stop burning frames
         }
     }
 
@@ -131,8 +140,8 @@ fun ForceDirectedCanvas(
         }) {
             // Edges
             for (edge in edges) {
-                val src = nodeStates.find { it.id == edge.source } ?: continue
-                val tgt = nodeStates.find { it.id == edge.target } ?: continue
+                val src = nodeStates[idToIndex[edge.source] ?: continue]
+                val tgt = nodeStates[idToIndex[edge.target] ?: continue]
                 val edgeColor = EdgeColors[edge.edgeType] ?: OnSurfaceVariant
                 val alpha = when (edge.edgeType) {
                     "membership"   -> 0.25f

@@ -65,9 +65,28 @@ fun ModelScreen(vm: ModelViewModel = viewModel()) {
                 MnemoMark(color = Accent, size = 20.dp)
                 Text("Ask Mnemo", style = MaterialTheme.typography.headlineMedium, color = OnSurface)
             }
-            if (state.messages.isNotEmpty()) {
-                IconButton(onClick = vm::clearChat) {
-                    Icon(Icons.Default.Delete, contentDescription = "Clear chat", tint = OnSurfaceVariant, modifier = Modifier.size(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // RAG toggle chip
+                val ragBorder = if (state.isRagMode) Accent else TextMuted.copy(alpha = 0.3f)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(0.5.dp, ragBorder, RoundedCornerShape(8.dp))
+                        .background(if (state.isRagMode) Accent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent)
+                        .clickable { vm.toggleRagMode() }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "Use your data",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (state.isRagMode) Accent else TextMuted,
+                    )
+                }
+                if (state.messages.isNotEmpty()) {
+                    IconButton(onClick = vm::clearChat) {
+                        Icon(Icons.Default.Delete, contentDescription = "Clear chat", tint = OnSurfaceVariant, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }
@@ -133,28 +152,10 @@ fun ModelScreen(vm: ModelViewModel = viewModel()) {
 
             // Input row
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // RAG toggle chip
-                val ragBorder = if (state.isRagMode) Accent else TextMuted.copy(alpha = 0.3f)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(0.5.dp, ragBorder, RoundedCornerShape(8.dp))
-                        .background(if (state.isRagMode) Accent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent)
-                        .clickable { vm.toggleRagMode() }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "RAG",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (state.isRagMode) Accent else TextMuted,
-                    )
-                }
-
                 OutlinedTextField(
                     value = state.prompt,
                     onValueChange = vm::onPromptChange,

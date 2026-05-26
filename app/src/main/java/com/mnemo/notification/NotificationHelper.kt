@@ -1,5 +1,6 @@
 package com.mnemo.notification
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,8 +10,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 object NotificationHelper {
-    const val CHANNEL_ID = "mnemo_digest"
-    const val NOTIFICATION_ID = 1001
+    const val CHANNEL_ID         = "mnemo_digest"
+    const val NOTIFICATION_ID    = 1001
+
+    const val INDEXING_CHANNEL_ID              = "mnemo_indexing_v2"
+    const val INDEXING_NOTIFICATION_ID         = 1002
+    const val INDEXING_COMPLETE_NOTIFICATION_ID = 1003
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
@@ -23,6 +28,46 @@ object NotificationHelper {
         }
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
+    }
+
+    fun createIndexingChannel(context: Context) {
+        val channel = NotificationChannel(
+            INDEXING_CHANNEL_ID,
+            "Indexing progress",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Shows progress while Mnemo indexes screenshots in the background"
+            enableVibration(false)
+            setShowBadge(false)
+        }
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .createNotificationChannel(channel)
+    }
+
+    fun buildIndexingNotification(context: Context, done: Int, total: Int): Notification {
+        val progress = if (total > 0) (done * 100 / total) else 0
+        return NotificationCompat.Builder(context, INDEXING_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Mnemo · Indexing in progress")
+            .setContentText("$done / $total complete")
+            .setProgress(100, progress, total == 0)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .build()
+    }
+
+    fun sendIndexingCompleteNotification(context: Context, indexed: Int, failed: Int) {
+        val text = if (failed == 0) "Indexed $indexed screenshots"
+                   else "Indexed $indexed screenshots · $failed failed"
+        // Use a separate ID (1003) so WorkManager's stopForeground cleanup of ID 1002
+        // (the in-progress notification) doesn't wipe this one.
+        val notification = NotificationCompat.Builder(context, INDEXING_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Mnemo · Indexing complete")
+            .setContentText(text)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(INDEXING_COMPLETE_NOTIFICATION_ID, notification)
     }
 
     fun sendDigestNotification(

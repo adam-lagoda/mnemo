@@ -1,10 +1,13 @@
 package com.mnemo.scheduling
 
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.Build
 import androidx.work.*
 import com.mnemo.di.AppModule
 import com.mnemo.embedding.toEmbeddingBlob
+import com.mnemo.notification.NotificationHelper
 import com.mnemo.util.BitmapUtils
 
 class ExtractionWorker(
@@ -25,58 +28,81 @@ class ExtractionWorker(
         var failed = 0
         val startTime = System.currentTimeMillis()
 
-        unextracted.forEachIndexed { index, entity ->
-            try {
-                // ETA: based on average ms per completed item so far
-                val remainingSeconds = if (index > 0) {
-                    val avgMs = (System.currentTimeMillis() - startTime) / index.toLong()
-                    ((total - index) * avgMs / 1000L).toInt()
-                } else -1
+        try {
+            setForeground(buildForegroundInfo(applicationContext, 0, total))
 
-                emitProgress(entity.uri, index, total, Step.LOADING, remainingSeconds)
+            unextracted.forEachIndexed { index, entity ->
+                try {
+                    // ETA: based on average ms per completed item so far
+                    val remainingSeconds = if (index > 0) {
+                        val avgMs = (System.currentTimeMillis() - startTime) / index.toLong()
+                        ((total - index) * avgMs / 1000L).toInt()
+                    } else -1
 
-                val bitmap = BitmapUtils.loadAndResize(
-                    applicationContext.contentResolver,
-                    Uri.parse(entity.uri)
-                ) ?: run { failed++; return@forEachIndexed }
+                    emitProgress(entity.uri, index, total, Step.LOADING, remainingSeconds)
 
-                emitProgress(entity.uri, index, total, Step.EXTRACTING, remainingSeconds)
+                    val bitmap = BitmapUtils.loadAndResize(
+                        applicationContext.contentResolver,
+                        Uri.parse(entity.uri)
+                    ) ?: run { failed++; return@forEachIndexed }
 
-                val result = extractor.extract(bitmap, entity.uri)
-                bitmap.recycle()
+                    emitProgress(entity.uri, index, total, Step.EXTRACTING, remainingSeconds)
 
-                if (result != null) {
-                    emitProgress(entity.uri, index, total, Step.SAVING, remainingSeconds)
+                    val result = extractor.extract(bitmap, entity.uri)
+                    bitmap.recycle()
 
-                    val json = kotlinx.serialization.json.Json
-                        .encodeToString(com.mnemo.data.model.ExtractionResult.serializer(), result)
-                    repo.update(entity.copy(
-                        extractedJson = json,
-                        sourceType = result.source_type
-                    ))
+                    if (result != null) {
+                        emitProgress(entity.uri, index, total, Step.SAVING, remainingSeconds)
 
-                    if (onnx.isReady) {
-                        emitProgress(entity.uri, index, total, Step.EMBEDDING, remainingSeconds)
-                        val docText = buildDocText(result)
-                        val vector = onnx.embed(docText)
-                        if (vector.isNotEmpty()) {
-                            repo.updateEmbedding(entity.id, vector.toEmbeddingBlob())
+                        val json = kotlinx.serialization.json.Json
+                            .encodeToString(com.mnemo.data.model.ExtractionResult.serializer(), result)
+                        repo.update(entity.copy(
+                            extractedJson = json,
+                            sourceType = result.source_type
+                        ))
+
+                        if (onnx.isReady) {
+                            emitProgress(entity.uri, index, total, Step.EMBEDDING, remainingSeconds)
+                            val docText = buildDocText(result)
+                            val vector = onnx.embed(docText)
+                            if (vector.isNotEmpty()) {
+                                repo.updateEmbedding(entity.id, vector.toEmbeddingBlob())
+                            }
                         }
+
+                        setForeground(buildForegroundInfo(applicationContext, index + 1, total))
+                    } else {
+                        android.util.Log.w("ExtractionWorker", "extract() returned null for ${entity.uri}")
+                        failed++
                     }
-                } else {
-                    android.util.Log.w("ExtractionWorker", "extract() returned null for ${entity.uri}")
+                } catch (e: Exception) {
+                    android.util.Log.e("ExtractionWorker", "Failed to process ${entity.uri}", e)
                     failed++
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("ExtractionWorker", "Failed to process ${entity.uri}", e)
-                failed++
             }
+        } finally {
+            // Always post the completion notification — replaces the in-progress one in-place.
+            // Runs before Result.success() so it lands before WorkManager detaches the service.
+            NotificationHelper.sendIndexingCompleteNotification(applicationContext, total - failed, failed)
         }
 
         val graphRequest = OneTimeWorkRequestBuilder<GraphUpdateWorker>().build()
         WorkManager.getInstance(applicationContext).enqueue(graphRequest)
 
         return Result.success()
+    }
+
+    private fun buildForegroundInfo(context: Context, done: Int, total: Int): ForegroundInfo {
+        val notification = NotificationHelper.buildIndexingNotification(context, done, total)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NotificationHelper.INDEXING_NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NotificationHelper.INDEXING_NOTIFICATION_ID, notification)
+        }
     }
 
     private suspend fun emitProgress(uri: String, index: Int, total: Int, step: Step, remainingSeconds: Int) {

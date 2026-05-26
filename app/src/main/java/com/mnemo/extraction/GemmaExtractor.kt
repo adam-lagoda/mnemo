@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -24,9 +26,11 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
 
     private var engine: Engine? = null
     private var chatConversation: Conversation? = null
+    private val conversationMutex = Mutex()
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    @Synchronized
     private fun getOrCreateEngine(): Engine {
         return engine ?: run {
             val config = EngineConfig(
@@ -44,24 +48,28 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
 
     override suspend fun extract(bitmap: Bitmap, screenshotUri: String): ExtractionResult? =
         withContext(Dispatchers.IO) {
-            val tmpFile = File.createTempFile("screenshot", ".jpg", context.cacheDir)
-            try {
-                tmpFile.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-                val e = getOrCreateEngine()
-                e.createConversation().use { conversation ->
-                    val response = conversation.sendMessage(
-                        Contents.of(
-                            Content.ImageFile(tmpFile.absolutePath),
-                            Content.Text(ExtractionPrompts.buildExtractionPrompt())
-                        )
-                    ).toString()
-                    parseResponse(response)
+            conversationMutex.withLock {
+                chatConversation?.close()
+                chatConversation = null
+                val tmpFile = File.createTempFile("screenshot", ".jpg", context.cacheDir)
+                try {
+                    tmpFile.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                    val e = getOrCreateEngine()
+                    e.createConversation().use { conversation ->
+                        val response = conversation.sendMessage(
+                            Contents.of(
+                                Content.ImageFile(tmpFile.absolutePath),
+                                Content.Text(ExtractionPrompts.buildExtractionPrompt())
+                            )
+                        ).toString()
+                        parseResponse(response)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("GemmaExtractor", "extract() failed", e)
+                    null
+                } finally {
+                    tmpFile.delete()
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("GemmaExtractor", "extract() failed", e)
-                null
-            } finally {
-                tmpFile.delete()
             }
         }
 
@@ -78,21 +86,27 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
 
     suspend fun generate(prompt: String): String =
         withContext(Dispatchers.IO) {
-            val e = getOrCreateEngine()
-            e.createConversation().use { conversation ->
-                conversation.sendMessage(Contents.of(Content.Text(prompt))).toString()
+            conversationMutex.withLock {
+                chatConversation?.close()
+                chatConversation = null
+                val e = getOrCreateEngine()
+                e.createConversation().use { conversation ->
+                    conversation.sendMessage(Contents.of(Content.Text(prompt))).toString()
+                }
             }
         }
 
     fun generateStream(prompt: String): Flow<String> = flow {
-        val e = getOrCreateEngine()
-        val conversation = if (chatConversation?.isAlive == true) {
-            chatConversation!!
-        } else {
-            e.createConversation().also { chatConversation = it }
-        }
-        conversation.sendMessageAsync(Contents.of(Content.Text(prompt))).collect { message ->
-            emit(message.toString())
+        conversationMutex.withLock {
+            val e = getOrCreateEngine()
+            val conversation = if (chatConversation?.isAlive == true) {
+                chatConversation!!
+            } else {
+                e.createConversation().also { chatConversation = it }
+            }
+            conversation.sendMessageAsync(Contents.of(Content.Text(prompt))).collect { message ->
+                emit(message.toString())
+            }
         }
     }.flowOn(Dispatchers.IO)
 
@@ -101,6 +115,7 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
         chatConversation = null
     }
 
+    @Synchronized
     override fun close() {
         chatConversation?.close()
         chatConversation = null
