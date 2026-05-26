@@ -49,6 +49,8 @@ data class IndexingUiState(
     val pendingQueued: List<ScreenshotCandidate> = emptyList(),
     /** Candidates in DB with extractedJson != null — done */
     val indexed: List<ScreenshotCandidate> = emptyList(),
+    /** URI string → DB entity id, for navigating to detail on tap */
+    val uriToDbId: Map<String, String> = emptyMap(),
     val selectedUris: Set<Uri> = emptySet(),
     val progress: ExtractionProgress? = null,
     val isScanning: Boolean = false,
@@ -72,9 +74,10 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
     private val _preparingProgress = MutableStateFlow<ExtractionProgress?>(null)
 
     private val _progress: Flow<ExtractionProgress?> = WorkManager.getInstance(app)
-        .getWorkInfosForUniqueWorkFlow("extraction")
+        .getWorkInfosForUniqueWorkFlow(ExtractionWorker.WORK_NAME)
         .map { infos ->
             val running = infos.firstOrNull { it.state == WorkInfo.State.RUNNING }
+            val enqueued = infos.firstOrNull { it.state == WorkInfo.State.ENQUEUED }
             if (running != null) {
                 val data = running.progress
                 val uri = data.getString(KEY_URI)
@@ -89,11 +92,11 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
                         remainingSeconds = data.getInt(KEY_REMAINING_SECONDS, -1)
                     )
                 } else {
-                    // Worker running but hasn't emitted first progress yet
                     ExtractionProgress(uri = "", stepLabel = "Starting…", isPreparing = true)
                 }
-            } else if (infos.any { it.state == WorkInfo.State.ENQUEUED }) {
-                ExtractionProgress(uri = "", stepLabel = "Queued…", isPreparing = true)
+            } else if (enqueued != null) {
+                // Worker queued but not yet running — keep the card visible
+                ExtractionProgress(uri = "", stepLabel = "Starting…", isPreparing = true)
             } else {
                 null
             }
@@ -124,6 +127,8 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             dbByUri[c.uri.toString()]?.extractedJson != null
         }
 
+        val uriToDbId = (entities as List<ScreenshotEntity>)
+            .associate { it.uri to it.id }
         IndexingUiState(
             folderDisplayName = config.displayName,
             hasFolderSelected = config.treeUri != null,
@@ -131,6 +136,7 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             pendingNew = pendingNew,
             pendingQueued = pendingQueued,
             indexed = indexed,
+            uriToDbId = uriToDbId,
             selectedUris = selected as Set<Uri>,
             progress = progress as? ExtractionProgress,
             isScanning = scanning as Boolean,
@@ -199,8 +205,6 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             }
             ExtractionWorker.enqueue(getApplication())
             _isIndexing.value = false
-            // WorkManager will now drive progress; clear manual state once it picks up
-            _progress.first { it != null }
             _preparingProgress.value = null
         }
     }

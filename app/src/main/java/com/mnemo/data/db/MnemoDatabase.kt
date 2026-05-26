@@ -17,6 +17,8 @@ abstract class MnemoDatabase : RoomDatabase() {
     abstract fun graphEdgeDao(): GraphEdgeDao
 
     companion object {
+        private const val DB_NAME = "mnemo.db"
+
         @Volatile private var INSTANCE: MnemoDatabase? = null
 
         fun getInstance(context: Context): MnemoDatabase {
@@ -24,7 +26,7 @@ abstract class MnemoDatabase : RoomDatabase() {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     MnemoDatabase::class.java,
-                    "mnemo.db"
+                    DB_NAME
                 ).build().also { INSTANCE = it }
             }
         }

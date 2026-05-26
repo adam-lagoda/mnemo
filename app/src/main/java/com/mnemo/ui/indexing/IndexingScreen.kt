@@ -3,6 +3,7 @@ package com.mnemo.ui.indexing
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import com.mnemo.ui.theme.*
 @Composable
 fun IndexingScreen(
     onBack: () -> Unit,
+    onScreenshotClick: (String) -> Unit = {},
     vm: IndexingViewModel = viewModel()
 ) {
     val state by vm.uiState.collectAsState()
@@ -156,7 +158,11 @@ fun IndexingScreen(
                     inFlightUri = state.inFlightUri,
                     onToggle = vm::toggleSelection
                 )
-                1 -> IndexedGrid(indexed = state.indexed)
+                1 -> IndexedGrid(
+                    indexed = state.indexed,
+                    uriToDbId = state.uriToDbId,
+                    onScreenshotClick = onScreenshotClick,
+                )
             }
         }
 
@@ -204,6 +210,17 @@ private fun formatEta(seconds: Int): String {
 
 @Composable
 private fun ExtractionProgressCard(progress: ExtractionProgress) {
+    val pulseTransition = rememberInfiniteTransition(label = "step_pulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "current_bar_alpha",
+    )
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -259,7 +276,7 @@ private fun ExtractionProgressCard(progress: ExtractionProgress) {
                 )
             }
 
-            // Step dots — only shown once worker is actually running
+            // Step bars — only shown once worker is actually running
             if (!progress.isPreparing) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     val stepLabels = listOf("Load", "Extract", "Save")
@@ -267,20 +284,25 @@ private fun ExtractionProgressCard(progress: ExtractionProgress) {
                         val stepNum = idx + 1
                         val isDone = stepNum < progress.stepNum
                         val isCurrent = stepNum == progress.stepNum
-                        val dotColor = when {
-                            isDone    -> Accent
-                            isCurrent -> Accent.copy(alpha = 0.7f)
+                        val barColor = when {
+                            isDone    -> Accent.copy(alpha = 0.35f)
+                            isCurrent -> Accent.copy(alpha = pulseAlpha)
+                            else      -> Color(0x14FFFFFF)
+                        }
+                        val labelColor = when {
+                            isCurrent -> TextPrimary
+                            isDone    -> OnSurfaceVariant.copy(alpha = 0.5f)
                             else      -> OnSurfaceVariant.copy(alpha = 0.3f)
                         }
                         Surface(
-                            color = dotColor,
+                            color = barColor,
                             shape = RoundedCornerShape(4.dp),
                             modifier = Modifier.height(4.dp).weight(1f)
                         ) {}
                         Text(
                             label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isCurrent) Accent else OnSurfaceVariant.copy(alpha = if (isDone) 0.8f else 0.4f)
+                            color = labelColor,
                         )
                         if (idx < stepLabels.lastIndex) Spacer(Modifier.width(2.dp))
                     }
@@ -337,7 +359,11 @@ private fun PendingGrid(
 }
 
 @Composable
-private fun IndexedGrid(indexed: List<ScreenshotCandidate>) {
+private fun IndexedGrid(
+    indexed: List<ScreenshotCandidate>,
+    uriToDbId: Map<String, String>,
+    onScreenshotClick: (String) -> Unit,
+) {
     if (indexed.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No indexed screenshots yet", style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
@@ -352,13 +378,14 @@ private fun IndexedGrid(indexed: List<ScreenshotCandidate>) {
         modifier = Modifier.fillMaxSize()
     ) {
         items(indexed, key = { it.id }) { candidate ->
+            val dbId = uriToDbId[candidate.uri.toString()]
             CandidateTile(
                 candidate = candidate,
                 isSelected = false,
                 isQueued = false,
                 isInFlight = false,
                 showCheckmark = true,
-                onClick = {}
+                onClick = { if (dbId != null) onScreenshotClick(dbId) }
             )
         }
     }

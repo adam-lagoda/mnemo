@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.mnemo.data.db.entities.ScreenshotEntity
-import com.mnemo.data.db.entities.GraphEdgeEntity
 import com.mnemo.data.model.ExtractionResult
 import com.mnemo.data.repository.GraphRepository
 import com.mnemo.data.repository.ScreenshotRepository
@@ -47,11 +46,15 @@ class DetailViewModel(
                 val extraction = screenshot?.extractedJson?.let { j ->
                     try { json.decodeFromString<ExtractionResult>(j) } catch (e: Exception) { null }
                 }
-                val edges = graphRepo.getEdgesForNode(id)
-                val relatedIds = analytics.getRelated(id, edges.map {
-                    GraphEdgeEntity(it.sourceId, it.targetId, it.weight, it.edgeType)
-                })
-                val related = relatedIds.mapNotNull { screenshotRepo.getById(it) }
+                // Related = same community, excluding self, ordered by timestamp desc
+                val related: List<ScreenshotEntity> = if (screenshot != null && screenshot.communityId >= 0) {
+                    screenshotRepo.getByCommunity(screenshot.communityId)
+                        .filter { it.id != id }
+                        .sortedByDescending { it.timestamp }
+                        .take(12)
+                } else {
+                    emptyList()
+                }
                 emit(DetailUiState(screenshot = screenshot, extraction = extraction, related = related, isLoading = false))
             }
         }

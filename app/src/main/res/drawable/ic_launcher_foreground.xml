@@ -1,28 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Mnemo launcher icon — bold "M" lettermark.
+    Geometry matches MnemoMark.kt (90×90 viewBox) scaled ×0.8 + offset 18,
+    fitting the 108×108 adaptive-icon canvas with equal margins.
+
+    Left stem  : outer edge bows left  — Q14,54 24.4,90
+    Right stem : outer edge bows right — Q94,54 83.6,90
+    V arms meet at (51.6–56.4, 62.8)
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Forked tail -->
+    <!-- Left curved stem -->
     <path
-        android:fillColor="#00C8C8"
-        android:pathData="M38,48 L16,34 L32,51 L32,57 L16,74 L38,60 Z"/>
+        android:fillColor="#E2725B"
+        android:pathData="M24.4,18 Q14,54,24.4,90 L35.6,90 L35.6,18 Z"/>
 
-    <!-- Body (oval) -->
+    <!-- Left diagonal arm -->
     <path
-        android:fillColor="#00C8C8"
-        android:pathData="M62,37 C75.3,37 86,44.7 86,54 C86,63.3 75.3,71 62,71 C48.7,71 38,63.3 38,54 C38,44.7 48.7,37 62,37 Z"/>
+        android:fillColor="#E2725B"
+        android:pathData="M35.6,18 L46,18 L56.4,62.8 L51.6,62.8 Z"/>
 
-    <!-- Eye white -->
+    <!-- Right diagonal arm -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M73,49 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"/>
+        android:fillColor="#E2725B"
+        android:pathData="M62,18 L72.4,18 L56.4,62.8 L51.6,62.8 Z"/>
 
-    <!-- Pupil -->
+    <!-- Right curved stem -->
     <path
-        android:fillColor="#0A0A0A"
-        android:pathData="M74,49 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+        android:fillColor="#E2725B"
+        android:pathData="M72.4,18 L83.6,18 Q94,54,83.6,90 L72.4,90 Z"/>
 
 </vector>

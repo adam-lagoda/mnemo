@@ -4,6 +4,7 @@ import android.content.Context
 import com.mnemo.data.db.MnemoDatabase
 import com.mnemo.data.repository.GraphRepository
 import com.mnemo.data.repository.ScreenshotRepository
+import com.mnemo.embedding.OnnxEmbeddingEngine
 import com.mnemo.embedding.TfIdfFallbackEngine
 import com.mnemo.extraction.GemmaExtractor
 import com.mnemo.extraction.VlmExtractor
@@ -21,6 +22,7 @@ class AppModule private constructor(context: Context) {
     val graphRepository = GraphRepository(db.graphEdgeDao())
 
     val embeddingEngine = TfIdfFallbackEngine()
+    val onnxEmbeddingEngine = OnnxEmbeddingEngine(context)
     val vlmExtractor: VlmExtractor = GemmaExtractor(context)
     val graphBuilder = GraphBuilder(embeddingEngine, screenshotRepository)
     val graphAnalytics = GraphAnalytics()

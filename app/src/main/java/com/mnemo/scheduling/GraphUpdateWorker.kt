@@ -36,10 +36,12 @@ class GraphUpdateWorker(
     }
 
     companion object {
+        const val WORK_NAME = "graph_update"
+
         fun enqueue(context: Context) {
             val request = OneTimeWorkRequestBuilder<GraphUpdateWorker>().build()
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "graph_update",
+                WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
                 request
             )

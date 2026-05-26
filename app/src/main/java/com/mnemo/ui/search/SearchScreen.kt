@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -35,17 +36,26 @@ fun SearchScreen(
         OutlinedTextField(
             value = state.query,
             onValueChange = vm::onQueryChange,
-            placeholder = { Text("Search by title, topic, entity…", color = OnSurfaceVariant) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = OnSurfaceVariant) },
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            placeholder = {
+                Text(
+                    "Search by meaning…",
+                    color = TextTertiary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Accent) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             singleLine = true,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Accent,
-                unfocusedBorderColor = Outline,
+                unfocusedBorderColor = Color(0x14FFFFFF),
                 cursorColor = Accent,
-                focusedTextColor = OnSurface,
-                unfocusedTextColor = OnSurface
-            )
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                focusedContainerColor = Color(0x0AFFFFFF),
+                unfocusedContainerColor = Color(0x0AFFFFFF),
+            ),
         )
 
         when {

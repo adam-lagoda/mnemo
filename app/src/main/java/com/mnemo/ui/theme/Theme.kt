@@ -7,19 +7,20 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = Accent,
-    onPrimary = Background,
-    secondary = AccentDim,
-    onSecondary = Background,
+    onPrimary = Surface,
+    secondary = BrandPrimary,
+    onSecondary = Surface,
     background = Background,
     surface = Surface,
     surfaceVariant = SurfaceVariant,
-    onBackground = OnSurface,
-    onSurface = OnSurface,
-    onSurfaceVariant = OnSurfaceVariant,
+    surfaceContainer = SurfaceElevated,
+    onBackground = TextPrimary,
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextTertiary,
     error = Error,
-    outline = Outline
+    outline = Outline,
 )
 
 @Composable
@@ -29,11 +30,11 @@ fun MnemoTheme(content: @Composable () -> Unit) {
         SideEffect {
             val window = (view.context as Activity).window
             WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
         }
     }
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = LightColorScheme,
         typography = MnemoTypography,
         content = content
     )

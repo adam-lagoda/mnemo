@@ -1,14 +1,16 @@
 package com.mnemo.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,9 +28,13 @@ import com.mnemo.ui.theme.*
 fun DetailScreen(
     screenshotId: String,
     onBack: () -> Unit,
+    onOpen: (String) -> Unit = {},
     vm: DetailViewModel = viewModel()
 ) {
-    LaunchedEffect(screenshotId) { vm.load(screenshotId) }
+    LaunchedEffect(screenshotId) {
+        vm.load(screenshotId)
+        vm.markReviewed()
+    }
     val state by vm.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -44,11 +50,6 @@ fun DetailScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = OnSurface)
             }
             Spacer(Modifier.weight(1f))
-            if (state.screenshot?.reviewed == false) {
-                IconButton(onClick = vm::markReviewed) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Mark reviewed", tint = Accent)
-                }
-            }
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(Icons.Outlined.Delete, contentDescription = "Remove", tint = Error)
             }
@@ -64,14 +65,26 @@ fun DetailScreen(
         val screenshot = state.screenshot ?: return@Column
         val extraction = state.extraction
 
-        // Image
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(screenshot.uri)
-                .crossfade(true).build(),
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth().wrapContentHeight()
-        )
+        // Image with community accent bar at bottom
+        val cColor = communityColor(screenshot.communityId)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current).data(screenshot.uri)
+                    .crossfade(true).build(),
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+            )
+            if (screenshot.communityId >= 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(cColor),
+                )
+            }
+        }
 
         // Extracted data
         if (extraction != null) {
@@ -82,7 +95,7 @@ fun DetailScreen(
                     if (extraction.urgency > 0.5f) Chip("URGENT")
                 }
                 if (extraction.title.isNotBlank()) {
-                    Text(extraction.title, style = MaterialTheme.typography.titleMedium)
+                    Text(extraction.title, style = SerifTitle, color = TextPrimary)
                 }
                 if (extraction.summary.isNotBlank()) {
                     Text(extraction.summary, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
@@ -103,7 +116,7 @@ fun DetailScreen(
             }
         }
 
-        // Related screenshots
+        // Related screenshots — same community, tappable
         if (state.related.isNotEmpty()) {
             Text(
                 "Related",
@@ -114,14 +127,32 @@ fun DetailScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.related) { related ->
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current).data(related.uri)
-                            .crossfade(true).build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(80.dp).background(SurfaceVariant)
-                    )
+                items(state.related, key = { it.id }) { related ->
+                    val relatedColor = communityColor(related.communityId)
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(SurfaceVariant)
+                            .clickable { onOpen(related.id) }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current).data(related.uri)
+                                .crossfade(true).build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        if (related.communityId >= 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth()
+                                    .height(2.dp)
+                                    .background(relatedColor)
+                            )
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(16.dp))

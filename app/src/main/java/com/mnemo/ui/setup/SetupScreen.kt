@@ -1,8 +1,5 @@
 package com.mnemo.ui.setup
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,14 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -26,18 +21,10 @@ import com.mnemo.model.ModelDownloadState
 import com.mnemo.model.ModelId
 import com.mnemo.model.ModelSpec
 import com.mnemo.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Composable
 fun SetupScreen(vm: SetupViewModel = viewModel()) {
     val state by vm.uiState.collectAsState()
-
-    val folderPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let { vm.setTreeUri(it) }
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -84,88 +71,6 @@ fun SetupScreen(vm: SetupViewModel = viewModel()) {
             )
         }
 
-        // ── Screenshot Folder ─────────────────────────────────────
-        item {
-            Text(
-                "Screenshot Folder",
-                style = MaterialTheme.typography.titleSmall,
-                color = OnSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-            )
-        }
-
-        item {
-            Surface(
-                color = SurfaceVariant,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Folder,
-                        contentDescription = null,
-                        tint = Accent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = if (state.hasFolderSelected) state.folderDisplayName
-                               else "Tap to select screenshot folder",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (state.hasFolderSelected) OnSurface else OnSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = { folderPickerLauncher.launch(null) }) {
-                        Text(if (state.hasFolderSelected) "Change" else "Select", color = Accent)
-                    }
-                }
-            }
-        }
-
-        // ── Indexing Status ───────────────────────────────────────
-        item {
-            Text(
-                "Indexing",
-                style = MaterialTheme.typography.titleSmall,
-                color = OnSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-            )
-        }
-
-        item {
-            Surface(
-                color = SurfaceVariant,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            "${state.indexedCount} / ${state.candidateCount} indexed",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurface
-                        )
-                        val lastAt = state.lastIndexedAt
-                        Text(
-                            text = if (lastAt != null) {
-                                "Last: ${SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(lastAt))}"
-                            } else "Never indexed",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                    TextButton(onClick = vm::reIndexNow) {
-                        Text("Re-index", color = Accent)
-                    }
-                }
-            }
-        }
     }
 }
 

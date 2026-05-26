@@ -29,12 +29,13 @@ object Routes {
 }
 
 @Composable
-fun MnemoNavGraph(navController: NavHostController) {
+fun MnemoNavGraph(navController: NavHostController, onSearchClick: () -> Unit) {
     NavHost(navController = navController, startDestination = Routes.GALLERY) {
         composable(Routes.GALLERY) {
             GalleryScreen(
                 onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) },
-                onPendingClick = { navController.navigate(Routes.INDEXING) }
+                onPendingClick = { navController.navigate(Routes.INDEXING) },
+                onSearchClick = onSearchClick,
             )
         }
         composable(Routes.SEARCH) {
@@ -60,14 +61,21 @@ fun MnemoNavGraph(navController: NavHostController) {
             SetupScreen()
         }
         composable(Routes.INDEXING) {
-            IndexingScreen(onBack = { navController.popBackStack() })
+            IndexingScreen(
+                onBack = { navController.popBackStack() },
+                onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) },
+            )
         }
         composable(
             route = Routes.DETAIL,
             arguments = listOf(navArgument("screenshotId") { type = NavType.StringType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("screenshotId") ?: return@composable
-            DetailScreen(screenshotId = id, onBack = { navController.popBackStack() })
+            DetailScreen(
+                screenshotId = id,
+                onBack = { navController.popBackStack() },
+                onOpen = { newId -> navController.navigate(Routes.detail(newId)) },
+            )
         }
     }
 }

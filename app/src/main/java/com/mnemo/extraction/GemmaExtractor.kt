@@ -58,6 +58,7 @@ class GemmaExtractor(private val context: Context) : VlmExtractor {
                     parseResponse(response)
                 }
             } catch (e: Exception) {
+                android.util.Log.e("GemmaExtractor", "extract() failed", e)
                 null
             } finally {
                 tmpFile.delete()

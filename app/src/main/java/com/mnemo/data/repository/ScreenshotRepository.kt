@@ -8,6 +8,8 @@ class ScreenshotRepository(private val dao: ScreenshotDao) {
     fun observeAll(): Flow<List<ScreenshotEntity>> = dao.observeAll()
     fun observeByCommunity(communityId: Int): Flow<List<ScreenshotEntity>> =
         dao.observeByCommunity(communityId)
+    suspend fun getByCommunity(communityId: Int): List<ScreenshotEntity> =
+        dao.getByCommunity(communityId)
     fun observeUnextractedCount(): Flow<Int> = dao.observeUnextractedCount()
     suspend fun getAll(): List<ScreenshotEntity> = dao.getAll()
     suspend fun getUnextracted(): List<ScreenshotEntity> = dao.getUnextracted()
@@ -22,4 +24,6 @@ class ScreenshotRepository(private val dao: ScreenshotDao) {
     suspend fun search(query: String): List<ScreenshotEntity> = dao.search(query)
     suspend fun getById(id: String): ScreenshotEntity? = dao.getById(id)
     suspend fun getAllUris(): List<String> = dao.getAllUris()
+    suspend fun getEmbedded(): List<ScreenshotEntity> = dao.getEmbedded()
+    suspend fun updateEmbedding(id: String, blob: ByteArray) = dao.updateEmbedding(id, blob)
 }

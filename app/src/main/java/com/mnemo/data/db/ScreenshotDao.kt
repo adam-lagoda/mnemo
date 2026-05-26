@@ -33,6 +33,9 @@ interface ScreenshotDao {
     @Query("SELECT * FROM screenshots WHERE communityId = :communityId ORDER BY timestamp DESC")
     fun observeByCommunity(communityId: Int): Flow<List<ScreenshotEntity>>
 
+    @Query("SELECT * FROM screenshots WHERE communityId = :communityId ORDER BY timestamp DESC")
+    suspend fun getByCommunity(communityId: Int): List<ScreenshotEntity>
+
     @Query("SELECT * FROM screenshots WHERE id = :id")
     suspend fun getById(id: String): ScreenshotEntity?
 
@@ -50,4 +53,10 @@ interface ScreenshotDao {
 
     @Query("SELECT uri FROM screenshots")
     suspend fun getAllUris(): List<String>
+
+    @Query("SELECT * FROM screenshots WHERE embeddingBlob IS NOT NULL AND extractedJson IS NOT NULL ORDER BY timestamp DESC")
+    suspend fun getEmbedded(): List<ScreenshotEntity>
+
+    @Query("UPDATE screenshots SET embeddingBlob = :blob WHERE id = :id")
+    suspend fun updateEmbedding(id: String, blob: ByteArray)
 }
