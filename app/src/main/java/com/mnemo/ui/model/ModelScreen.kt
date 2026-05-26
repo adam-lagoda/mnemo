@@ -15,7 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mnemo.ui.theme.*
@@ -175,6 +182,45 @@ fun ModelScreen(vm: ModelViewModel = viewModel()) {
     }
 }
 
+private fun parseMarkdown(text: String): AnnotatedString = buildAnnotatedString {
+    // Normalise bullet markers at line start to •
+    val src = text.replace(Regex("^[*-] ", RegexOption.MULTILINE), "• ")
+    var i = 0
+    while (i < src.length) {
+        when {
+            src.startsWith("**", i) -> {
+                val end = src.indexOf("**", i + 2)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(src.substring(i + 2, end)) }
+                    i = end + 2
+                } else { append(src[i]); i++ }
+            }
+            src.startsWith("*", i) -> {
+                val end = src.indexOf("*", i + 1)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(src.substring(i + 1, end)) }
+                    i = end + 1
+                } else { append(src[i]); i++ }
+            }
+            src.startsWith("_", i) -> {
+                val end = src.indexOf("_", i + 1)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(src.substring(i + 1, end)) }
+                    i = end + 1
+                } else { append(src[i]); i++ }
+            }
+            src.startsWith("`", i) -> {
+                val end = src.indexOf("`", i + 1)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(src.substring(i + 1, end)) }
+                    i = end + 1
+                } else { append(src[i]); i++ }
+            }
+            else -> { append(src[i]); i++ }
+        }
+    }
+}
+
 @Composable
 private fun MessageBubble(message: ChatMessage, isStreamingLast: Boolean) {
     val isUser = message.role == "user"
@@ -192,7 +238,11 @@ private fun MessageBubble(message: ChatMessage, isStreamingLast: Boolean) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = message.text.ifEmpty { if (isStreamingLast) " " else "" },
+                    text = if (isUser) {
+                        AnnotatedString(message.text.ifEmpty { if (isStreamingLast) " " else "" })
+                    } else {
+                        parseMarkdown(message.text.ifEmpty { if (isStreamingLast) " " else "" })
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isUser) Background else OnSurface,
                 )

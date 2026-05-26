@@ -78,6 +78,11 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         _selectedIds.value = if (id in current) current - id else current + id
     }
 
+    fun selectAll() {
+        val current = uiState.value.screenshots
+        _selectedIds.value = current.map { it.id }.toSet()
+    }
+
     fun exitSelectionMode() {
         _isSelectionMode.value = false
         _selectedIds.value = emptySet()

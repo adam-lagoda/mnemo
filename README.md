@@ -1,5 +1,7 @@
 # Mnemo
 
+> **Why "Mnemo"?** It's a mashup of *memory*, *memo*, and *Nemo* — the fish from the Pixar movie who got lost and couldn't be found. Your screenshots are Nemo. Mnemo finds them. Unlike Nemo's dad, it doesn't cross the entire ocean to do it — it just runs on your phone.
+
 Mnemo turns your screenshots into a searchable, connected knowledge base — entirely on your device. No cloud, no uploads, no account required.
 
 ## What it does

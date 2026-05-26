@@ -33,7 +33,8 @@ fun MnemoNavGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = Routes.GALLERY) {
         composable(Routes.GALLERY) {
             GalleryScreen(
-                onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) }
+                onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) },
+                onPendingClick = { navController.navigate(Routes.INDEXING) }
             )
         }
         composable(Routes.SEARCH) {

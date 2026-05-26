@@ -21,6 +21,7 @@ import com.mnemo.ui.theme.*
 @Composable
 fun GalleryScreen(
     onScreenshotClick: (String) -> Unit,
+    onPendingClick: () -> Unit,
     vm: GalleryViewModel = viewModel()
 ) {
     val state by vm.uiState.collectAsState()
@@ -41,6 +42,10 @@ fun GalleryScreen(
                     color = OnSurface
                 )
                 Spacer(Modifier.weight(1f))
+                val allSelected = state.selectedIds.size == state.screenshots.size
+                TextButton(onClick = { if (allSelected) vm.exitSelectionMode() else vm.selectAll() }) {
+                    Text(if (allSelected) "Deselect all" else "Select all", color = Accent)
+                }
                 TextButton(onClick = vm::exitSelectionMode) {
                     Text("Cancel", color = Accent)
                 }
@@ -54,7 +59,8 @@ fun GalleryScreen(
                 if (state.pendingCount > 0) {
                     Surface(
                         color = SurfaceVariant,
-                        shape = MaterialTheme.shapes.small
+                        shape = MaterialTheme.shapes.small,
+                        onClick = onPendingClick
                     ) {
                         Text(
                             "${state.pendingCount} not indexed",

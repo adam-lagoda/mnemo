@@ -29,13 +29,14 @@ import kotlinx.coroutines.yield
 import java.util.UUID
 
 data class ExtractionProgress(
-    val uri: String,
+    val uri: String,          // empty while preparing
     val stepLabel: String,
-    val stepNum: Int,
-    val stepTotal: Int,
-    val itemIndex: Int,
-    val itemTotal: Int,
-    val remainingSeconds: Int   // -1 = not yet known (first item)
+    val stepNum: Int = 1,
+    val stepTotal: Int = 3,
+    val itemIndex: Int = 0,
+    val itemTotal: Int = 0,
+    val remainingSeconds: Int = -1,
+    val isPreparing: Boolean = false  // true while worker is enqueued but not yet running
 )
 
 data class IndexingUiState(
@@ -68,30 +69,47 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
     private val _selectedUris = MutableStateFlow<Set<Uri>>(emptySet())
     private val _isScanning = MutableStateFlow(false)
     private val _isIndexing = MutableStateFlow(false)
+    private val _preparingProgress = MutableStateFlow<ExtractionProgress?>(null)
 
     private val _progress: Flow<ExtractionProgress?> = WorkManager.getInstance(app)
         .getWorkInfosForUniqueWorkFlow("extraction")
         .map { infos ->
-            val data = infos.firstOrNull { it.state == WorkInfo.State.RUNNING }?.progress
-                ?: return@map null
-            val uri = data.getString(KEY_URI) ?: return@map null
-            ExtractionProgress(
-                uri = uri,
-                stepLabel = data.getString(KEY_STEP_LABEL) ?: "",
-                stepNum = data.getInt(KEY_STEP_NUM, 1),
-                stepTotal = data.getInt(KEY_STEP_TOTAL, 3),
-                itemIndex = data.getInt(KEY_ITEM_INDEX, 0),
-                itemTotal = data.getInt(KEY_ITEM_TOTAL, 0),
-                remainingSeconds = data.getInt(KEY_REMAINING_SECONDS, -1)
-            )
+            val running = infos.firstOrNull { it.state == WorkInfo.State.RUNNING }
+            if (running != null) {
+                val data = running.progress
+                val uri = data.getString(KEY_URI)
+                if (uri != null) {
+                    ExtractionProgress(
+                        uri = uri,
+                        stepLabel = data.getString(KEY_STEP_LABEL) ?: "",
+                        stepNum = data.getInt(KEY_STEP_NUM, 1),
+                        stepTotal = data.getInt(KEY_STEP_TOTAL, 3),
+                        itemIndex = data.getInt(KEY_ITEM_INDEX, 0),
+                        itemTotal = data.getInt(KEY_ITEM_TOTAL, 0),
+                        remainingSeconds = data.getInt(KEY_REMAINING_SECONDS, -1)
+                    )
+                } else {
+                    // Worker running but hasn't emitted first progress yet
+                    ExtractionProgress(uri = "", stepLabel = "Starting…", isPreparing = true)
+                }
+            } else if (infos.any { it.state == WorkInfo.State.ENQUEUED }) {
+                ExtractionProgress(uri = "", stepLabel = "Queued…", isPreparing = true)
+            } else {
+                null
+            }
         }
         .catch { emit(null) }
+
+    // Effective progress: WorkManager progress takes over once available, else manual preparing state
+    private val _effectiveProgress: Flow<ExtractionProgress?> = combine(_progress, _preparingProgress) { wm, manual ->
+        wm ?: manual
+    }
 
     val uiState: StateFlow<IndexingUiState> = combine(
         combine(_scanResult, screenshotRepo.observeAll(), _selectedUris) { candidates, entities, selected ->
             Triple(candidates, entities, selected)
         },
-        combine(_progress, _isScanning, _isIndexing) { progress, scanning, indexing ->
+        combine(_effectiveProgress, _isScanning, _isIndexing) { progress, scanning, indexing ->
             Triple(progress, scanning, indexing)
         }
     ) { (candidates, entities, selected), (progress, scanning, indexing) ->
@@ -160,6 +178,10 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _isIndexing.value = true
             _selectedUris.value = emptySet()
+            _preparingProgress.value = ExtractionProgress(
+                uri = "", stepLabel = "Queuing images…",
+                itemTotal = toInsert.size, isPreparing = true
+            )
             withContext(Dispatchers.IO) {
                 toInsert.chunked(50).forEach { batch ->
                     val entities = batch.mapNotNull { uri ->
@@ -177,6 +199,9 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             }
             ExtractionWorker.enqueue(getApplication())
             _isIndexing.value = false
+            // WorkManager will now drive progress; clear manual state once it picks up
+            _progress.first { it != null }
+            _preparingProgress.value = null
         }
     }
 

@@ -213,34 +213,37 @@ private fun ExtractionProgressCard(progress: ExtractionProgress) {
         tonalElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Image counter + current URI thumbnail
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(Uri.parse(progress.uri))
-                        .crossfade(true).build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(Background, RoundedCornerShape(6.dp))
-                )
+                if (!progress.isPreparing && progress.uri.isNotEmpty()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(Uri.parse(progress.uri))
+                            .crossfade(true).build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Background, RoundedCornerShape(6.dp))
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Image ${progress.itemIndex} of ${progress.itemTotal}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = OnSurfaceVariant
-                        )
-                        if (progress.remainingSeconds >= 0) {
+                    if (!progress.isPreparing) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
-                                formatEta(progress.remainingSeconds),
+                                "Image ${progress.itemIndex} of ${progress.itemTotal}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = OnSurfaceVariant
                             )
+                            if (progress.remainingSeconds >= 0) {
+                                Text(
+                                    formatEta(progress.remainingSeconds),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OnSurfaceVariant
+                                )
+                            }
                         }
                     }
                     Text(
@@ -256,29 +259,31 @@ private fun ExtractionProgressCard(progress: ExtractionProgress) {
                 )
             }
 
-            // Step progress dots
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                val stepLabels = listOf("Load", "Extract", "Save")
-                stepLabels.forEachIndexed { idx, label ->
-                    val stepNum = idx + 1
-                    val isDone = stepNum < progress.stepNum
-                    val isCurrent = stepNum == progress.stepNum
-                    val dotColor = when {
-                        isDone -> Accent
-                        isCurrent -> Accent.copy(alpha = 0.7f)
-                        else -> OnSurfaceVariant.copy(alpha = 0.3f)
+            // Step dots — only shown once worker is actually running
+            if (!progress.isPreparing) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val stepLabels = listOf("Load", "Extract", "Save")
+                    stepLabels.forEachIndexed { idx, label ->
+                        val stepNum = idx + 1
+                        val isDone = stepNum < progress.stepNum
+                        val isCurrent = stepNum == progress.stepNum
+                        val dotColor = when {
+                            isDone    -> Accent
+                            isCurrent -> Accent.copy(alpha = 0.7f)
+                            else      -> OnSurfaceVariant.copy(alpha = 0.3f)
+                        }
+                        Surface(
+                            color = dotColor,
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.height(4.dp).weight(1f)
+                        ) {}
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isCurrent) Accent else OnSurfaceVariant.copy(alpha = if (isDone) 0.8f else 0.4f)
+                        )
+                        if (idx < stepLabels.lastIndex) Spacer(Modifier.width(2.dp))
                     }
-                    Surface(
-                        color = dotColor,
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.height(4.dp).weight(1f)
-                    ) {}
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isCurrent) Accent else OnSurfaceVariant.copy(alpha = if (isDone) 0.8f else 0.4f)
-                    )
-                    if (idx < stepLabels.lastIndex) Spacer(Modifier.width(2.dp))
                 }
             }
         }

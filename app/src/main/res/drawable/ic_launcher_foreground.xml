@@ -4,8 +4,25 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Simple "M" for Mnemo in cyan -->
+
+    <!-- Forked tail -->
     <path
         android:fillColor="#00C8C8"
-        android:pathData="M24,80 L24,28 L54,60 L84,28 L84,80 L76,80 L76,46 L54,70 L32,46 L32,80 Z"/>
+        android:pathData="M38,48 L16,34 L32,51 L32,57 L16,74 L38,60 Z"/>
+
+    <!-- Body (oval) -->
+    <path
+        android:fillColor="#00C8C8"
+        android:pathData="M62,37 C75.3,37 86,44.7 86,54 C86,63.3 75.3,71 62,71 C48.7,71 38,63.3 38,54 C38,44.7 48.7,37 62,37 Z"/>
+
+    <!-- Eye white -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M73,49 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"/>
+
+    <!-- Pupil -->
+    <path
+        android:fillColor="#0A0A0A"
+        android:pathData="M74,49 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+
 </vector>
