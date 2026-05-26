@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -159,8 +160,14 @@ fun IndexingScreen(
             }
         }
 
-        // Bottom action bar (Pending tab only)
-        if (selectedTab == 0 && (state.pendingNew.isNotEmpty() || state.selectedCount > 0)) {
+        // Progress card — shown while extraction is running
+        state.progress?.let { progress ->
+            ExtractionProgressCard(progress = progress)
+        }
+
+        // Bottom action bar (Pending tab only, hidden while extracting)
+        if (selectedTab == 0 && state.progress == null &&
+            (state.pendingNew.isNotEmpty() || state.selectedCount > 0)) {
             Surface(color = Surface, tonalElevation = 4.dp) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -181,12 +188,97 @@ fun IndexingScreen(
                         enabled = state.selectedCount > 0 && !state.isIndexing,
                         colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
                     ) {
-                        if (state.isIndexing) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Background, strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
-                        }
                         Text("Index ${if (state.selectedCount > 0) state.selectedCount else ""} selected".trim())
                     }
+                }
+            }
+        }
+    }
+}
+
+private fun formatEta(seconds: Int): String {
+    val m = seconds / 60
+    val s = seconds % 60
+    return if (m > 0) "${m}m ${s}s left" else "${s}s left"
+}
+
+@Composable
+private fun ExtractionProgressCard(progress: ExtractionProgress) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        color = SurfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Image counter + current URI thumbnail
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(Uri.parse(progress.uri))
+                        .crossfade(true).build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Background, RoundedCornerShape(6.dp))
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Image ${progress.itemIndex} of ${progress.itemTotal}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = OnSurfaceVariant
+                        )
+                        if (progress.remainingSeconds >= 0) {
+                            Text(
+                                formatEta(progress.remainingSeconds),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    }
+                    Text(
+                        progress.stepLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurface
+                    )
+                }
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Accent,
+                    strokeWidth = 2.dp
+                )
+            }
+
+            // Step progress dots
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                val stepLabels = listOf("Load", "Extract", "Save")
+                stepLabels.forEachIndexed { idx, label ->
+                    val stepNum = idx + 1
+                    val isDone = stepNum < progress.stepNum
+                    val isCurrent = stepNum == progress.stepNum
+                    val dotColor = when {
+                        isDone -> Accent
+                        isCurrent -> Accent.copy(alpha = 0.7f)
+                        else -> OnSurfaceVariant.copy(alpha = 0.3f)
+                    }
+                    Surface(
+                        color = dotColor,
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.height(4.dp).weight(1f)
+                    ) {}
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isCurrent) Accent else OnSurfaceVariant.copy(alpha = if (isDone) 0.8f else 0.4f)
+                    )
+                    if (idx < stepLabels.lastIndex) Spacer(Modifier.width(2.dp))
                 }
             }
         }

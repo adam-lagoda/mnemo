@@ -42,7 +42,7 @@ fun MnemoNavGraph(navController: NavHostController) {
             })
         }
         composable(Routes.GRAPH) {
-            GraphScreen(onNodeTap = { id ->
+            GraphScreen(onScreenshotOpen = { id ->
                 navController.navigate(Routes.detail(id))
             })
         }

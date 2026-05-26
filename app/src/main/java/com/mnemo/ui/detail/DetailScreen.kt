@@ -70,7 +70,7 @@ fun DetailScreen(
                 .crossfade(true).build(),
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
+            modifier = Modifier.fillMaxWidth().wrapContentHeight()
         )
 
         // Extracted data

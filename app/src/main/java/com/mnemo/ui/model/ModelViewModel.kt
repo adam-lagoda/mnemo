@@ -12,11 +12,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.max
+
+data class ChatMessage(val role: String, val text: String)
 
 data class ModelUiState(
     val prompt: String = "",
-    val response: String = "",
-    val isLoading: Boolean = false,
+    val messages: List<ChatMessage> = emptyList(),
+    val isStreaming: Boolean = false,
+    val tokensPerSecond: Float? = null,
     val modelReady: Boolean = false,
     val error: String? = null,
 )
@@ -46,18 +50,61 @@ class ModelViewModel(app: Application) : AndroidViewModel(app) {
 
     fun ask() {
         val prompt = _uiState.value.prompt.trim()
-        if (prompt.isBlank() || _uiState.value.isLoading) return
+        if (prompt.isBlank() || _uiState.value.isStreaming) return
+
+        _uiState.value = _uiState.value.copy(
+            messages = _uiState.value.messages +
+                    ChatMessage("user", prompt) +
+                    ChatMessage("model", ""),
+            prompt = "",
+            isStreaming = true,
+            error = null,
+        )
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, response = "", error = null)
+            var tokenCount = 0
+            var startMs = 0L
             try {
-                val result = gemmaExtractor?.generate(prompt) ?: "No model loaded."
-                _uiState.value = _uiState.value.copy(isLoading = false, response = result)
+                val stream = gemmaExtractor?.generateStream(prompt)
+                if (stream == null) {
+                    updateLastMessage("No model loaded.")
+                } else {
+                    stream.collect { token ->
+                        if (tokenCount == 0) startMs = System.currentTimeMillis()
+                        tokenCount++
+                        val elapsedSec = max(1L, System.currentTimeMillis() - startMs) / 1000f
+                        val msgs = _uiState.value.messages.toMutableList()
+                        val last = msgs.last()
+                        msgs[msgs.lastIndex] = last.copy(text = last.text + token)
+                        _uiState.value = _uiState.value.copy(
+                            messages = msgs,
+                            tokensPerSecond = tokenCount / elapsedSec,
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
                     error = e.message ?: e.javaClass.simpleName
                 )
+            } finally {
+                _uiState.value = _uiState.value.copy(isStreaming = false)
             }
         }
+    }
+
+    fun clearChat() {
+        gemmaExtractor?.clearChatHistory()
+        _uiState.value = _uiState.value.copy(messages = emptyList(), error = null, tokensPerSecond = null)
+    }
+
+    private fun updateLastMessage(text: String) {
+        val msgs = _uiState.value.messages.toMutableList()
+        if (msgs.isNotEmpty()) msgs[msgs.lastIndex] = msgs.last().copy(text = text)
+        _uiState.value = _uiState.value.copy(messages = msgs)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        gemmaExtractor?.clearChatHistory()
     }
 }

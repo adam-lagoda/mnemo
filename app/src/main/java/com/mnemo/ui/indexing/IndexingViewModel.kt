@@ -12,6 +12,13 @@ import com.mnemo.data.model.ScreenshotCandidate
 import com.mnemo.data.prefs.AppConfig
 import com.mnemo.di.AppModule
 import com.mnemo.scheduling.ExtractionWorker
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_ITEM_INDEX
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_ITEM_TOTAL
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_REMAINING_SECONDS
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_STEP_LABEL
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_STEP_NUM
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_STEP_TOTAL
+import com.mnemo.scheduling.ExtractionWorker.Companion.KEY_URI
 import com.mnemo.util.DateUtils
 import com.mnemo.util.MediaStoreScanner
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +27,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.util.UUID
+
+data class ExtractionProgress(
+    val uri: String,
+    val stepLabel: String,
+    val stepNum: Int,
+    val stepTotal: Int,
+    val itemIndex: Int,
+    val itemTotal: Int,
+    val remainingSeconds: Int   // -1 = not yet known (first item)
+)
 
 data class IndexingUiState(
     val folderDisplayName: String = "",
@@ -32,14 +49,14 @@ data class IndexingUiState(
     /** Candidates in DB with extractedJson != null — done */
     val indexed: List<ScreenshotCandidate> = emptyList(),
     val selectedUris: Set<Uri> = emptySet(),
-    /** URI currently being processed by ExtractionWorker */
-    val inFlightUri: String? = null,
+    val progress: ExtractionProgress? = null,
     val isScanning: Boolean = false,
     val isIndexing: Boolean = false
 ) {
     val indexedCount: Int get() = indexed.size
     val totalCount: Int get() = pendingNew.size + pendingQueued.size + indexed.size
     val selectedCount: Int get() = selectedUris.size
+    val inFlightUri: String? get() = progress?.uri
 }
 
 class IndexingViewModel(app: Application) : AndroidViewModel(app) {
@@ -52,11 +69,21 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
     private val _isScanning = MutableStateFlow(false)
     private val _isIndexing = MutableStateFlow(false)
 
-    private val _inFlightUri: Flow<String?> = WorkManager.getInstance(app)
+    private val _progress: Flow<ExtractionProgress?> = WorkManager.getInstance(app)
         .getWorkInfosForUniqueWorkFlow("extraction")
         .map { infos ->
-            infos.firstOrNull { it.state == WorkInfo.State.RUNNING }
-                ?.progress?.getString("current_uri")
+            val data = infos.firstOrNull { it.state == WorkInfo.State.RUNNING }?.progress
+                ?: return@map null
+            val uri = data.getString(KEY_URI) ?: return@map null
+            ExtractionProgress(
+                uri = uri,
+                stepLabel = data.getString(KEY_STEP_LABEL) ?: "",
+                stepNum = data.getInt(KEY_STEP_NUM, 1),
+                stepTotal = data.getInt(KEY_STEP_TOTAL, 3),
+                itemIndex = data.getInt(KEY_ITEM_INDEX, 0),
+                itemTotal = data.getInt(KEY_ITEM_TOTAL, 0),
+                remainingSeconds = data.getInt(KEY_REMAINING_SECONDS, -1)
+            )
         }
         .catch { emit(null) }
 
@@ -64,10 +91,10 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
         combine(_scanResult, screenshotRepo.observeAll(), _selectedUris) { candidates, entities, selected ->
             Triple(candidates, entities, selected)
         },
-        combine(_inFlightUri, _isScanning, _isIndexing) { inFlight, scanning, indexing ->
-            Triple(inFlight, scanning, indexing)
+        combine(_progress, _isScanning, _isIndexing) { progress, scanning, indexing ->
+            Triple(progress, scanning, indexing)
         }
-    ) { (candidates, entities, selected), (inFlight, scanning, indexing) ->
+    ) { (candidates, entities, selected), (progress, scanning, indexing) ->
         val dbByUri = (entities as List<ScreenshotEntity>).associateBy { it.uri }
         val candidateList = candidates as List<ScreenshotCandidate>
 
@@ -87,7 +114,7 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             pendingQueued = pendingQueued,
             indexed = indexed,
             selectedUris = selected as Set<Uri>,
-            inFlightUri = inFlight as? String,
+            progress = progress as? ExtractionProgress,
             isScanning = scanning as Boolean,
             isIndexing = indexing as Boolean
         )

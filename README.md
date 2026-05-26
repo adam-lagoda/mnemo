@@ -51,6 +51,8 @@ After indexing, search, gallery, and graph views are all populated automatically
 
 Mnemo processes everything on-device. No analytics, no telemetry, no network calls beyond the one-time model download from HuggingFace. The extracted metadata is stored in a local SQLite database on your phone.
 
+**Mnemo never modifies or deletes your photos.** The app requests read-only access to your gallery (`READ_MEDIA_IMAGES`) and the screenshot folder you select. It has no write permissions to external storage. When you remove a screenshot from Mnemo's index, only the local database record is deleted — the image file on your device is untouched.
+
 ## Technical notes
 
 - AI inference: [Google LiteRT LM](https://ai.google.dev/edge/litert) with Gemma 3n E2B (INT4 quantized)

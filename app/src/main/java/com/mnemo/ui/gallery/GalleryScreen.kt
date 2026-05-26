@@ -51,13 +51,13 @@ fun GalleryScreen(
                     color = OnSurface
                 )
                 Spacer(Modifier.weight(1f))
-                if (state.unextractedCount > 0) {
+                if (state.pendingCount > 0) {
                     Surface(
                         color = SurfaceVariant,
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
-                            "${state.unextractedCount} waiting to index",
+                            "${state.pendingCount} not indexed",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = Accent
