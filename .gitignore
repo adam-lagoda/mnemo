@@ -119,6 +119,9 @@ hs_err_pid*
 
 ### Android template
 local.properties
+app/keystore.properties
+app/*.jks
+app/*.keystore
 
 ### Gradle template
 .gradle
