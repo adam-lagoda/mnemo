@@ -45,7 +45,7 @@ data class ModelUiState(
     val isRetrieving: Boolean = false,
     val tokensPerSecond: Float? = null,
     val modelReady: Boolean = false,
-    val isRagMode: Boolean = false,
+    val isRagMode: Boolean = true,
     val error: String? = null,
 )
 
