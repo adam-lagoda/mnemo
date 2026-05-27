@@ -67,8 +67,8 @@ fun GraphScreen(
                 ) {
                     item {
                         FilterChip(
-                            selected = state.topicFilter == null,
-                            onClick = { vm.setTopicFilter(null) },
+                            selected = state.topicFilter.isEmpty(),
+                            onClick = { vm.clearTopicFilter() },
                             label = { Text("All topics", style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Accent,
@@ -78,8 +78,8 @@ fun GraphScreen(
                     }
                     items(state.availableTopics) { topic ->
                         FilterChip(
-                            selected = state.topicFilter == topic,
-                            onClick = { vm.setTopicFilter(if (state.topicFilter == topic) null else topic) },
+                            selected = topic in state.topicFilter,
+                            onClick = { vm.toggleTopicFilter(topic) },
                             label = { Text(topic, style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Accent,

@@ -51,7 +51,9 @@ fun MnemoNavGraph(navController: NavHostController, onSearchClick: () -> Unit) {
                 onTopicOpen = { key -> navController.navigate(Routes.topic(key)) },
             )
         }
-        composable(Routes.MODEL) { ModelScreen() }
+        composable(Routes.MODEL) {
+            ModelScreen(onScreenshotClick = { id -> navController.navigate(Routes.detail(id)) })
+        }
         composable(Routes.PROFILE) {
             ProfileScreen(
                 onSetupClick = { navController.navigate(Routes.SETUP) },

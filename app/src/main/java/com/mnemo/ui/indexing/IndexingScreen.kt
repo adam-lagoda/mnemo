@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -81,6 +83,45 @@ fun IndexingScreen(
         }
 
         if (!state.hasFolderSelected) return@Column
+
+        // Auto-watch toggle
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            color = SurfaceVariant,
+            shape = MaterialTheme.shapes.small
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Auto-index new screenshots",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurface
+                    )
+                    Text(
+                        "Index automatically when new screenshots are detected (requires battery ≥ 30%)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = state.autoWatchEnabled,
+                    onCheckedChange = vm::setAutoWatchEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Accent,
+                        checkedTrackColor = Accent.copy(alpha = 0.35f),
+                        uncheckedThumbColor = OnSurfaceVariant,
+                        uncheckedTrackColor = Outline,
+                        uncheckedBorderColor = OnSurfaceVariant.copy(alpha = 0.4f),
+                    )
+                )
+            }
+        }
 
         // Day filter chips
         Row(

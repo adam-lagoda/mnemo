@@ -38,7 +38,10 @@ import com.mnemo.ui.theme.*
 import com.mnemo.ui.theme.MnemoMark
 
 @Composable
-fun ModelScreen(vm: ModelViewModel = viewModel()) {
+fun ModelScreen(
+    onScreenshotClick: (String) -> Unit = {},
+    vm: ModelViewModel = viewModel(),
+) {
     val state by vm.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -122,6 +125,7 @@ fun ModelScreen(vm: ModelViewModel = viewModel()) {
                         MessageBubble(
                             message = message,
                             isStreamingLast = state.isStreaming && index == state.messages.lastIndex,
+                            onScreenshotClick = onScreenshotClick,
                         )
                     }
                     if (state.isRetrieving) {
@@ -224,7 +228,11 @@ private fun parseMarkdown(text: String): AnnotatedString = buildAnnotatedString 
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage, isStreamingLast: Boolean) {
+private fun MessageBubble(
+    message: ChatMessage,
+    isStreamingLast: Boolean,
+    onScreenshotClick: (String) -> Unit = {},
+) {
     val isUser = message.role == "user"
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -264,7 +272,9 @@ private fun MessageBubble(message: ChatMessage, isStreamingLast: Boolean) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(message.sources, key = { it.entity.id }) { src ->
                     Column(
-                        modifier = Modifier.width(64.dp),
+                        modifier = Modifier
+                            .width(64.dp)
+                            .clickable { onScreenshotClick(src.entity.id) },
                         verticalArrangement = Arrangement.spacedBy(3.dp),
                     ) {
                         AsyncImage(

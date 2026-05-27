@@ -76,8 +76,8 @@ fun ProfileScreen(
 
         ProfileNavCard(
             icon = Icons.AutoMirrored.Filled.List,
-            title = "Indexing Settings",
-            subtitle = "Browse, select, and index screenshots",
+            title = "Indexing",
+            subtitle = "Auto-index toggle, browse and select screenshots",
             onClick = onIndexingClick
         )
     }

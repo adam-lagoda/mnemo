@@ -136,6 +136,9 @@ class ExtractionWorker(
         }
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo =
+        buildForegroundInfo(applicationContext, 0, 0)
+
     private fun buildForegroundInfo(context: Context, done: Int, total: Int, remainingSeconds: Int = -1): ForegroundInfo {
         val notification = NotificationHelper.buildIndexingNotification(context, done, total, id, remainingSeconds)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -179,7 +182,9 @@ class ExtractionWorker(
         const val KEY_REMAINING_SECONDS = "remaining_seconds"
 
         fun enqueue(context: Context) {
-            val request = OneTimeWorkRequestBuilder<ExtractionWorker>().build()
+            val request = OneTimeWorkRequestBuilder<ExtractionWorker>()
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 WORK_NAME,
                 ExistingWorkPolicy.KEEP,

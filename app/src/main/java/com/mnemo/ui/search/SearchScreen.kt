@@ -31,11 +31,12 @@ fun SearchScreen(
     vm: SearchViewModel = viewModel()
 ) {
     val state by vm.uiState.collectAsState()
+    var query by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         OutlinedTextField(
-            value = state.query,
-            onValueChange = vm::onQueryChange,
+            value = query,
+            onValueChange = { query = it; vm.onQueryChange(it) },
             placeholder = {
                 Text(
                     "Search by meaning…",

@@ -54,7 +54,8 @@ data class IndexingUiState(
     val selectedUris: Set<Uri> = emptySet(),
     val progress: ExtractionProgress? = null,
     val isScanning: Boolean = false,
-    val isIndexing: Boolean = false
+    val isIndexing: Boolean = false,
+    val autoWatchEnabled: Boolean = false,
 ) {
     val indexedCount: Int get() = indexed.size
     val totalCount: Int get() = pendingNew.size + pendingQueued.size + indexed.size
@@ -72,6 +73,7 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
     private val _isScanning = MutableStateFlow(false)
     private val _isIndexing = MutableStateFlow(false)
     private val _preparingProgress = MutableStateFlow<ExtractionProgress?>(null)
+    private val _autoWatchEnabled = MutableStateFlow(config.autoWatchEnabled)
 
     private val _progress: Flow<ExtractionProgress?> = WorkManager.getInstance(app)
         .getWorkInfosForUniqueWorkFlow(ExtractionWorker.WORK_NAME)
@@ -114,8 +116,9 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
         },
         combine(_effectiveProgress, _isScanning, _isIndexing) { progress, scanning, indexing ->
             Triple(progress, scanning, indexing)
-        }
-    ) { (candidates, entities, selected), (progress, scanning, indexing) ->
+        },
+        _autoWatchEnabled
+    ) { (candidates, entities, selected), (progress, scanning, indexing), autoWatch ->
         val dbByUri = (entities as List<ScreenshotEntity>).associateBy { it.uri }
         val candidateList = candidates as List<ScreenshotCandidate>
 
@@ -140,12 +143,14 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             selectedUris = selected as Set<Uri>,
             progress = progress as? ExtractionProgress,
             isScanning = scanning as Boolean,
-            isIndexing = indexing as Boolean
+            isIndexing = indexing as Boolean,
+            autoWatchEnabled = autoWatch as Boolean,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), IndexingUiState(
         folderDisplayName = config.displayName,
         hasFolderSelected = config.treeUri != null,
-        dayFilter = config.dayFilter
+        dayFilter = config.dayFilter,
+        autoWatchEnabled = config.autoWatchEnabled,
     ))
 
     init { scan() }
@@ -155,6 +160,11 @@ class IndexingViewModel(app: Application) : AndroidViewModel(app) {
             .takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         config.treeUri = uri
         scan()
+    }
+
+    fun setAutoWatchEnabled(enabled: Boolean) {
+        config.autoWatchEnabled = enabled
+        _autoWatchEnabled.value = enabled
     }
 
     fun setDayFilter(days: Int) {

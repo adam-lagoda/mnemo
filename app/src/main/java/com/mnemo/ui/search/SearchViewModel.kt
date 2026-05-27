@@ -60,7 +60,7 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
                     val docText = "${r.title} ${r.summary} ${r.topics.joinToString(" ")} ${r.entities.joinToString(" ")}"
                     r to embeddingEngine.similarity(queryVec, embeddingEngine.embed(docText))
                 }
-                .filter { it.second > 0.05f }
+                .filter { it.second > 0.02f }
                 .sortedByDescending { it.second }
                 .map { it.first }
         }

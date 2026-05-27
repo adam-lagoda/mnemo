@@ -9,8 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.*
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,57 +69,6 @@ fun SetupScreen(vm: SetupViewModel = viewModel()) {
                 onRetry = { vm.retryDownload(ModelId.GTE_SMALL) },
                 onVerify = { vm.verifyModel(ModelId.GTE_SMALL) }
             )
-        }
-
-        // ── Indexing ─────────────────────────────────────────────────
-        item {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Indexing",
-                style = MaterialTheme.typography.titleSmall,
-                color = OnSurfaceVariant,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
-
-        item {
-            Surface(
-                color = SurfaceVariant,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Auto-index new screenshots",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurface
-                        )
-                        Text(
-                            "Index automatically when new screenshots are detected (requires battery ≥ 30%)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = state.autoWatchEnabled,
-                        onCheckedChange = vm::setAutoWatchEnabled,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Accent,
-                            checkedTrackColor = Accent.copy(alpha = 0.35f),
-                            uncheckedThumbColor = OnSurfaceVariant,
-                            uncheckedTrackColor = Outline,
-                            uncheckedBorderColor = OnSurfaceVariant.copy(alpha = 0.4f),
-                        )
-                    )
-                }
-            }
         }
 
     }
