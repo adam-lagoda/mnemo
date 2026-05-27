@@ -33,7 +33,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.mnemo.ACTION_OPEN_GALLERY" />
+                <action android:name="com.lagoda.mnemo.ACTION_OPEN_GALLERY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

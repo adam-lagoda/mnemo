@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.mnemo"
+    namespace = "com.lagoda.mnemo"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.mnemo"
+        applicationId = "com.lagoda.mnemo"
         minSdk = 28
         targetSdk = 35
         versionCode = 1

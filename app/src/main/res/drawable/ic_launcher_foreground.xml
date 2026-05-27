@@ -1,37 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Mnemo launcher icon — bold "M" lettermark.
-    Geometry matches MnemoMark.kt (90×90 viewBox) scaled ×0.8 + offset 18,
-    fitting the 108×108 adaptive-icon canvas with equal margins.
-
-    Left stem  : outer edge bows left  — Q14,54 24.4,90
-    Right stem : outer edge bows right — Q94,54 83.6,90
-    V arms meet at (51.6–56.4, 62.8)
+    Mnemo launcher icon — matches mnemo-icon.svg exactly.
+    Full-bleed black background ensures correct appearance in all contexts
+    (adaptive icon, share sheet, widget) regardless of device masking shape.
+    ViewBox 36×36 matches the original SVG.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="36"
+    android:viewportHeight="36">
 
-    <!-- Left curved stem -->
+    <!-- Full-bleed black background -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M0,0 H36 V36 H0 Z"/>
+
+    <!-- Terracotta M letterform from mnemo-icon.svg -->
     <path
         android:fillColor="#E2725B"
-        android:pathData="M24.4,18 Q14,54,24.4,90 L35.6,90 L35.6,18 Z"/>
-
-    <!-- Left diagonal arm -->
-    <path
-        android:fillColor="#E2725B"
-        android:pathData="M35.6,18 L46,18 L56.4,62.8 L51.6,62.8 Z"/>
-
-    <!-- Right diagonal arm -->
-    <path
-        android:fillColor="#E2725B"
-        android:pathData="M62,18 L72.4,18 L56.4,62.8 L51.6,62.8 Z"/>
-
-    <!-- Right curved stem -->
-    <path
-        android:fillColor="#E2725B"
-        android:pathData="M72.4,18 L83.6,18 Q94,54,83.6,90 L72.4,90 Z"/>
+        android:pathData="M8.174 9.125c.186-1.116 1.395-2.387 3.039-2.387c1.55 0 2.76 1.116 3.101 2.232l3.659 12.278h.062L21.692 8.97c.341-1.116 1.55-2.232 3.101-2.232c1.642 0 2.852 1.271 3.039 2.387l2.883 17.302c.031.186.031.372.031.526c0 1.365-.992 2.232-2.232 2.232c-1.582 0-2.201-.713-2.418-2.17l-1.83-12.619h-.062l-3.721 12.991c-.217.744-.805 1.798-2.48 1.798c-1.674 0-2.263-1.054-2.48-1.798l-3.721-12.991h-.062l-1.83 12.62c-.217 1.457-.837 2.17-2.418 2.17c-1.24 0-2.232-.867-2.232-2.232c0-.154 0-.341.031-.526L8.174 9.125z"/>
 
 </vector>
